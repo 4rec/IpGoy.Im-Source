@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random IP by ASN | ipgoy.im</title>
+    <link rel="stylesheet" href="https://ipgoy.im/styles.css">
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .result-box {
+            margin-top: 20px;
+            display: none;
+        }
+        .error-box {
+            margin-top: 20px;
+            display: none;
+            background-color: var(--active-link);
+            color: white;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .site-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .site-logo {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--header-bg);
+            margin-bottom: 10px;
+        }
+        .loading {
+            display: none;
+            margin: 10px 0;
+            font-style: italic;
+        }
+        .info-section {
+            margin-bottom: 15px;
+        }
+        .info-section h3 {
+            border-bottom: 1px solid var(--text-color);
+            padding-bottom: 3px;
+            margin-bottom: 8px;
+        }
+        .cidr-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--table-border);
+            padding: 5px;
+            background-color: var(--table-row-odd);
+            margin-bottom: 10px;
+        }
+        .cidr-item {
+            font-family: monospace;
+            margin: 2px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="https://ipgoy.im">Home</a>
+    </div>
+
+    <div class="container">
+        <div class="site-header">
+            <div class="site-logo">ipgoy.im</div>
+            <h1>Random IP by ASN</h1>
+        </div>
+        
+        <div class="box">
+            <div class="box-title">Search ASN</div>
+            <div class="form-group">
+                <label for="asn-number">ASN Number (e.g., 399642):</label>
+                <input type="text" id="asn-number" placeholder="Enter ASN number...">
+            </div>
+            <button id="lookup-btn">Generate Random IP</button>
+            <div id="loading" class="loading">Fetching ASN IP ranges...</div>
+        </div>
+
+        <div id="error-box" class="box error-box">
+            <div class="box-title">Error</div>
+            <div id="error-message"></div>
+        </div>
+
+        <div id="result-box" class="box result-box">
+            <div class="box-title">Random IP from ASN</div>
+            <div id="result-content">
+                <div class="info-section">
+                    <h3>ASN Information</h3>
+                    <div id="asn-info"></div>
+                </div>
+                
+                <div class="info-section">
+                    <h3>Selected CIDR Block</h3>
+                    <div id="selected-cidr" style="font-family: monospace;"></div>
+                </div>
+                
+                <div class="info-section">
+                    <h3>Random IP</h3>
+                    <div id="random-ip" style="font-family: monospace;"></div>
+                </div>
+                
+                <div class="info-section" id="cidr-list-section" style="display: none;">
+                    <h3>Available CIDR Blocks</h3>
+                    <div id="cidr-list" class="cidr-list"></div>
+                </div>
+            </div>
+            <div class="footer" style="margin-top: 15px;">
+                Data from ipverse/asn-ip repository | Made by rec :3
+            </div>
+        </div>
+
+        <div class="footer">
+            <a href="https://ipgoy.im">ipgoy.im</a> | Made by rec :3
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('lookup-btn').addEventListener('click', lookupASN);
+        document.getElementById('asn-number').addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                lookupASN();
+            }
+        });
+
+        async function lookupASN() {
+            const asnNumber = document.getElementById('asn-number').value.trim();
+            const errorBox = document.getElementById('error-box');
+            const resultBox = document.getElementById('result-box');
+            const loading = document.getElementById('loading');
+            
+            // Hide boxes and show loading
+            errorBox.style.display = 'none';
+            resultBox.style.display = 'none';
+            loading.style.display = 'block';
+
+            if (!asnNumber) {
+                showError("Please provide an ASN number. Example: 399642");
+                loading.style.display = 'none';
+                return;
+            }
+
+            // Validate ASN number
+            if (!/^\d+$/.test(asnNumber)) {
+                showError("Invalid ASN number. Please provide a numeric ASN like 399642");
+                loading.style.display = 'none';
+                return;
+            }
+
+            try {
+                const url = `https://raw.githubusercontent.com/ipverse/asn-ip/refs/heads/master/as/${asnNumber}/ipv4-aggregated.txt`;
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        throw new Error(`ASN ${asnNumber} not found in the database`);
+                    } else {
+                        throw new Error(`Failed to fetch ASN data (HTTP ${response.status})`);
+                    }
+                }
+
+                const text = await response.text();
+                
+                // Parse CIDR blocks (ignore comments and empty lines)
+                const cidrBlocks = [];
+                let asnInfo = "Unknown ASN";
+                
+                for (const line of text.split('\n')) {
+                    const trimmed = line.trim();
+                    if (trimmed && !trimmed.startsWith('#')) {
+                        // Validate it's a CIDR block
+                        if (trimmed.includes('/') && trimmed.split('.').length === 4) {
+                            cidrBlocks.push(trimmed);
+                        }
+                    } else if (trimmed.startsWith('# AS') && trimmed.includes('(')) {
+                        asnInfo = trimmed.substring(2); // Remove '# ' prefix
+                    }
+                }
+
+                if (cidrBlocks.length === 0) {
+                    throw new Error(`No valid IPv4 CIDR blocks found for AS${asnNumber}`);
+                }
+
+                // Select random CIDR block
+                const randomCidr = cidrBlocks[Math.floor(Math.random() * cidrBlocks.length)];
+                
+                // Generate random IP from CIDR block
+                const randomIp = generateRandomIpFromCidr(randomCidr);
+                
+                // Display results
+                document.getElementById('asn-info').textContent = asnInfo;
+                document.getElementById('selected-cidr').textContent = randomCidr;
+                document.getElementById('random-ip').textContent = randomIp;
+                
+                // Show CIDR list (limited to 50 for performance)
+                const cidrListSection = document.getElementById('cidr-list-section');
+                const cidrList = document.getElementById('cidr-list');
+                cidrList.innerHTML = '';
+                
+                const displayBlocks = cidrBlocks.slice(0, 50);
+                displayBlocks.forEach(cidr => {
+                    const div = document.createElement('div');
+                    div.className = 'cidr-item';
+                    div.textContent = cidr;
+                    cidrList.appendChild(div);
+                });
+                
+                if (cidrBlocks.length > 50) {
+                    const more = document.createElement('div');
+                    more.textContent = `...and ${cidrBlocks.length - 50} more`;
+                    cidrList.appendChild(more);
+                }
+                
+                cidrListSection.style.display = 'block';
+                resultBox.style.display = 'block';
+            } catch (error) {
+                showError(`Failed to fetch ASN IP ranges: ${error.message}`);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function generateRandomIpFromCidr(cidr) {
+            const [network, prefix] = cidr.split('/');
+            const prefixLength = parseInt(prefix);
+            
+            // Convert network to integer
+            const networkInt = ipToInt(network);
+            
+            // Calculate network mask and broadcast address
+            const mask = 0xffffffff << (32 - prefixLength);
+            const networkStart = networkInt & mask;
+            const networkEnd = networkStart | (~mask >>> 0);
+            
+            // Generate random IP in range
+            const randomIpInt = Math.floor(Math.random() * (networkEnd - networkStart + 1)) + networkStart;
+            
+            return intToIp(randomIpInt);
+        }
+
+        function ipToInt(ip) {
+            return ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet), 0) >>> 0;
+        }
+
+        function intToIp(int) {
+            return [
+                (int >>> 24) & 0xff,
+                (int >>> 16) & 0xff,
+                (int >>> 8) & 0xff,
+                int & 0xff
+            ].join('.');
+        }
+
+        function showError(message) {
+            const errorBox = document.getElementById('error-box');
+            document.getElementById('error-message').textContent = message;
+            errorBox.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
