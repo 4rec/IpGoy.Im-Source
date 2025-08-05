@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Website Ping Tool | ipgoy.im</title>
+    <link rel="stylesheet" href="https://ipgoy.im/styles.css">
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .result-box {
+            margin-top: 20px;
+            display: none;
+        }
+        .error-box {
+            margin-top: 20px;
+            display: none;
+            background-color: var(--active-link);
+            color: white;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .site-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .site-logo {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--header-bg);
+            margin-bottom: 10px;
+        }
+        .loading {
+            display: none;
+            margin: 10px 0;
+            font-style: italic;
+        }
+        .response-info {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: var(--table-row-odd);
+            border: 1px solid var(--table-border);
+        }
+        .response-details {
+            margin-top: 15px;
+        }
+        .response-data {
+            font-family: monospace;
+            white-space: pre-wrap;
+            background-color: var(--table-row-even);
+            padding: 10px;
+            border: 1px solid var(--table-border);
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .stat-box {
+            padding: 10px;
+            background-color: var(--table-row-odd);
+            border: 1px solid var(--table-border);
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--header-bg);
+        }
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="https://ipgoy.im">Home</a>
+    </div>
+
+    <div class="container">
+        <div class="site-header">
+            <div class="site-logo">ipgoy.im</div>
+            <h1>Website Ping Tool</h1>
+        </div>
+        
+        <div class="box">
+            <div class="box-title">Ping a Website</div>
+            <div class="form-group">
+                <label for="website-url">Website URL (e.g., example.com):</label>
+                <input type="text" id="website-url" placeholder="Enter website URL...">
+            </div>
+            <button id="ping-btn">Ping Website</button>
+            <div id="loading" class="loading">Pinging website...</div>
+        </div>
+
+        <div id="error-box" class="box error-box">
+            <div class="box-title">Error</div>
+            <div id="error-message"></div>
+        </div>
+
+        <div id="result-box" class="box result-box">
+            <div class="box-title">Ping Results</div>
+            <div id="result-content">
+                <div class="stats">
+                    <div class="stat-box">
+                        <div class="stat-value" id="response-time">0ms</div>
+                        <div class="stat-label">Response Time</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="status-code">---</div>
+                        <div class="stat-label">Status Code</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="content-length">---</div>
+                        <div class="stat-label">Content Length</div>
+                    </div>
+                </div>
+                
+                <div class="response-info">
+                    <h3>Response Headers</h3>
+                    <div id="response-headers" class="response-data"></div>
+                </div>
+                
+                <div class="response-details">
+                    <h3>Response Data</h3>
+                    <div id="response-data" class="response-data"></div>
+                </div>
+            </div>
+            <div class="footer" style="margin-top: 15px;">
+                Website Ping Tool | Made by rec :3
+            </div>
+        </div>
+
+        <div class="footer">
+            <a href="https://ipgoy.im">ipgoy.im</a> | Made by rec :3
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('ping-btn').addEventListener('click', pingWebsite);
+        document.getElementById('website-url').addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                pingWebsite();
+            }
+        });
+
+        async function pingWebsite() {
+            let websiteUrl = document.getElementById('website-url').value.trim();
+            const errorBox = document.getElementById('error-box');
+            const resultBox = document.getElementById('result-box');
+            const loading = document.getElementById('loading');
+            
+            // Hide boxes and show loading
+            errorBox.style.display = 'none';
+            resultBox.style.display = 'none';
+            loading.style.display = 'block';
+
+            if (!websiteUrl) {
+                showError("Please provide a website URL. Example: example.com");
+                loading.style.display = 'none';
+                return;
+            }
+
+            // Add http:// if not present
+            if (!websiteUrl.startsWith('http://') && !websiteUrl.startsWith('https://')) {
+                websiteUrl = 'https://' + websiteUrl;
+            }
+
+            try {
+                const startTime = performance.now();
+                const response = await fetch(websiteUrl, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    }
+                });
+                const endTime = performance.now();
+                const responseTime = Math.round(endTime - startTime);
+
+                // Display stats
+                document.getElementById('response-time').textContent = `${responseTime}ms`;
+                document.getElementById('status-code').textContent = response.status;
+                document.getElementById('content-length').textContent = 
+                    response.headers.get('content-length') || 'Unknown';
+
+                // Display headers
+                const headers = {};
+                response.headers.forEach((value, key) => {
+                    headers[key] = value;
+                });
+                document.getElementById('response-headers').textContent = 
+                    JSON.stringify(headers, null, 2);
+
+                // Display response data
+                const contentType = response.headers.get('content-type') || '';
+                if (contentType.includes('text') || contentType.includes('json') || contentType.includes('xml')) {
+                    const text = await response.text();
+                    document.getElementById('response-data').textContent = text;
+                } else if (contentType.includes('image')) {
+                    document.getElementById('response-data').textContent = 
+                        `[Binary image data - ${contentType}]`;
+                } else {
+                    document.getElementById('response-data').textContent = 
+                        `[Binary data - ${contentType}]`;
+                }
+
+                resultBox.style.display = 'block';
+            } catch (error) {
+                showError(`Failed to ping website: ${error.message}`);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function showError(message) {
+            const errorBox = document.getElementById('error-box');
+            document.getElementById('error-message').textContent = message;
+            errorBox.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
