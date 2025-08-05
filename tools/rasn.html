@@ -191,7 +191,7 @@
             }
 
             try {
-                const url = `https://whoisrequest.com/ip/${countryCode.toLowerCase()}`;
+                const url = `https://corsproxy.io/?url=https://whoisrequest.com/ip/${countryCode.toLowerCase()}`;
                 const response = await fetch(url);
                 
                 if (!response.ok) {
