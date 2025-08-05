@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random IP Generator | ipgoy.im</title>
+    <link rel="stylesheet" href="https://ipgoy.im/styles.css">
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .result-box {
+            margin-top: 20px;
+            display: none;
+        }
+        .error-box {
+            margin-top: 20px;
+            display: none;
+            background-color: var(--active-link);
+            color: white;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .site-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .site-logo {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--header-bg);
+            margin-bottom: 10px;
+        }
+        .loading {
+            display: none;
+            margin: 10px 0;
+            font-style: italic;
+        }
+        .ip-version-toggle {
+            margin: 10px 0;
+            text-align: center;
+        }
+        .ip-version-toggle button {
+            margin: 0 5px;
+        }
+        .active-version {
+            background-color: var(--header-bg) !important;
+            color: var(--header-text) !important;
+        }
+        .result-content {
+            font-family: monospace;
+        }
+        .result-ip {
+            font-weight: bold;
+            font-size: 18px;
+            margin: 10px 0;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="https://ipgoy.im">Home</a>
+    </div>
+
+    <div class="container">
+        <div class="site-header">
+            <div class="site-logo">ipgoy.im</div>
+            <h1>Random IP Generator</h1>
+        </div>
+        
+        <div class="ip-version-toggle">
+            <button id="ipv4-btn" class="active-version">IPv4</button>
+            <button id="ipv6-btn">IPv6</button>
+        </div>
+        
+        <div class="box">
+            <div class="box-title">Generate Random IP</div>
+            <div class="form-group">
+                <label for="country-code">2-letter Country Code (e.g., US, GB, JP):</label>
+                <input type="text" id="country-code" placeholder="Enter country code..." maxlength="2">
+            </div>
+            <button id="generate-btn">Generate Random IP</button>
+            <div id="loading" class="loading">Fetching CIDR ranges...</div>
+        </div>
+
+        <div id="error-box" class="box error-box">
+            <div class="box-title">Error</div>
+            <div id="error-message"></div>
+        </div>
+
+        <div id="result-box" class="box result-box">
+            <div class="box-title">Random IP Result</div>
+            <div id="result-content" class="result-content">
+                <div id="country-display"></div>
+                <div id="cidr-display"></div>
+                <div id="random-ip" class="result-ip"></div>
+            </div>
+            <div class="footer" style="margin-top: 15px;">
+                Data from CIDR ranges by country | Made by rec :3
+            </div>
+        </div>
+
+        <div class="footer">
+            <a href="https://ipgoy.im">ipgoy.im</a> | Made by rec :3
+        </div>
+    </div>
+
+    <script>
+        // Current IP version (IPv4 by default)
+        let currentVersion = 'ipv4';
+        
+        // Set up version toggle
+        document.getElementById('ipv4-btn').addEventListener('click', () => {
+            currentVersion = 'ipv4';
+            document.getElementById('ipv4-btn').classList.add('active-version');
+            document.getElementById('ipv6-btn').classList.remove('active-version');
+        });
+
+        document.getElementById('ipv6-btn').addEventListener('click', () => {
+            currentVersion = 'ipv6';
+            document.getElementById('ipv6-btn').classList.add('active-version');
+            document.getElementById('ipv4-btn').classList.remove('active-version');
+        });
+
+        // Generate button handler
+        document.getElementById('generate-btn').addEventListener('click', generateRandomIP);
+        document.getElementById('country-code').addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                generateRandomIP();
+            }
+        });
+
+        async function generateRandomIP() {
+            const countryCode = document.getElementById('country-code').value.trim().toUpperCase();
+            const errorBox = document.getElementById('error-box');
+            const resultBox = document.getElementById('result-box');
+            const loading = document.getElementById('loading');
+            
+            // Hide boxes and show loading
+            errorBox.style.display = 'none';
+            resultBox.style.display = 'none';
+            loading.style.display = 'block';
+
+            if (!countryCode) {
+                showError("Please provide a country code. Example: US, GB, JP");
+                loading.style.display = 'none';
+                return;
+            }
+
+            // Validate country code
+            if (countryCode.length !== 2 || !/^[A-Z]+$/.test(countryCode)) {
+                showError("Invalid country code. Please use 2-letter codes like US, GB, JP");
+                loading.style.display = 'none';
+                return;
+            }
+
+            try {
+                let url;
+                const isTF = countryCode === 'TF';
+                
+                if (currentVersion === 'ipv4') {
+                    url = isTF ? 
+                        "https://pastebin.com/raw/BFVr94Lq" :
+                        `https://raw.githubusercontent.com/ebrasha/cidr-ip-ranges-by-country/refs/heads/master/CIDR/${countryCode}-ipv4-Hackers.Zone.txt`;
+                } else {
+                    url = isTF ?
+                        "https://raw.githubusercontent.com/ebrasha/cidr-ip-ranges-by-country/refs/heads/master/CIDR/TF-ipv6-Hackers.Zone.txt" :
+                        `https://raw.githubusercontent.com/ebrasha/cidr-ip-ranges-by-country/refs/heads/master/CIDR/${countryCode}-ipv6-Hackers.Zone.txt`;
+                }
+
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`Couldn't find CIDR ranges for country code ${countryCode} (HTTP ${response.status})`);
+                }
+
+                const text = await response.text();
+                const lines = text.split('\n');
+
+                // Filter out empty lines and comments
+                const cidrBlocks = lines.filter(line => line.trim() && !line.startsWith('#')).map(line => line.trim());
+                
+                if (cidrBlocks.length === 0) {
+                    throw new Error(`No CIDR blocks found for ${countryCode}`);
+                }
+
+                // Select random CIDR block
+                const randomCidr = cidrBlocks[Math.floor(Math.random() * cidrBlocks.length)];
+                
+                // Generate random IP from CIDR block
+                let randomIP;
+                try {
+                    if (currentVersion === 'ipv4') {
+                        const network = parseIPv4Network(randomCidr);
+                        randomIP = generateRandomIPv4(network);
+                    } else {
+                        const network = parseIPv6Network(randomCidr);
+                        randomIP = generateRandomIPv6(network);
+                    }
+                } catch (e) {
+                    throw new Error(`Invalid CIDR block format: ${randomCidr}`);
+                }
+
+                // Display results
+                document.getElementById('country-display').textContent = `Country: ${countryCode}`;
+                document.getElementById('cidr-display').textContent = `CIDR Block: ${randomCidr}`;
+                document.getElementById('random-ip').textContent = `Random IP: ${randomIP}`;
+                
+                resultBox.style.display = 'block';
+            } catch (error) {
+                showError(`Failed to generate random IP: ${error.message}`);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function parseIPv4Network(cidr) {
+            const [ip, prefix] = cidr.split('/');
+            const ipInt = ipv4ToInt(ip);
+            const prefixLength = parseInt(prefix);
+            const mask = 0xffffffff << (32 - prefixLength);
+            const networkInt = ipInt & mask;
+            
+            return {
+                network: intToIPv4(networkInt),
+                prefixLength,
+                numAddresses: Math.pow(2, 32 - prefixLength)
+            };
+        }
+
+        function parseIPv6Network(cidr) {
+            // This is a simplified IPv6 parser - in a real app you'd want a more robust solution
+            const [ip, prefix] = cidr.split('/');
+            return {
+                network: ip,
+                prefixLength: parseInt(prefix),
+                isIPv6: true
+            };
+        }
+
+        function generateRandomIPv4(network) {
+            const networkInt = ipv4ToInt(network.network);
+            const randomOffset = Math.floor(Math.random() * network.numAddresses);
+            return intToIPv4(networkInt + randomOffset);
+        }
+
+        function generateRandomIPv6(network) {
+            // This is a simplified IPv6 generator - generates a random address within the range
+            // Note: This doesn't properly handle all IPv6 CIDR cases
+            const parts = network.network.split(':');
+            const hextets = [];
+            
+            // Fill in missing parts
+            while (parts.length < 8) {
+                parts.splice(parts.indexOf(''), 1, '0');
+            }
+            
+            // Generate random hextets
+            for (let i = 0; i < 8; i++) {
+                if (parts[i] === '') {
+                    hextets.push(Math.floor(Math.random() * 0x10000).toString(16));
+                } else {
+                    hextets.push(parts[i]);
+                }
+            }
+            
+            // Randomize the last parts based on prefix length
+            const randomParts = Math.max(0, 8 - Math.ceil(network.prefixLength / 16));
+            for (let i = 8 - randomParts; i < 8; i++) {
+                hextets[i] = Math.floor(Math.random() * 0x10000).toString(16);
+            }
+            
+            // Format as IPv6 address
+            return hextets.map(part => part.padStart(4, '0')).join(':').replace(/(^|:)0+/g, '$1').replace(/:{3,}/, '::');
+        }
+
+        function ipv4ToInt(ip) {
+            return ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet), 0) >>> 0;
+        }
+
+        function intToIPv4(int) {
+            return [
+                (int >>> 24) & 0xff,
+                (int >>> 16) & 0xff,
+                (int >>> 8) & 0xff,
+                int & 0xff
+            ].join('.');
+        }
+
+        function showError(message) {
+            const errorBox = document.getElementById('error-box');
+            document.getElementById('error-message').textContent = message;
+            errorBox.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
