@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ipgoy.im - Hurricane Electric Style Test</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>ipgoy.im - Internet Probe Gopher (Yours)</h1>
+    
+    <div class="navbar">
+        <a href="#">Home</a>
+        <a href="#">Network Tools</a>
+        <a href="#">DNS Lookup</a>
+        <a href="#">Traceroute</a>
+        <a href="#">Ping</a>
+        <a href="#">IPv6 Test</a>
+    </div>
+    
+    <div class="box">
+        <div class="box-title">Welcome to ipgoy.im</div>
+        <p>This is a test page for the old-school Hurricane Electric style CSS. The year is 2006 and the web is still wild.</p>
+        <p>Try our <a href="#">network tools</a> or read about <a href="#">IPv6 deployment</a>.</p>
+    </div>
+    
+    <h2>Network Status</h2>
+    <table>
+        <tr>
+            <th>Node</th>
+            <th>Status</th>
+            <th>Uptime</th>
+            <th>Load</th>
+        </tr>
+        <tr>
+            <td>core1.ipgoy.im</td>
+            <td>Up</td>
+            <td>42 days</td>
+            <td>0.12</td>
+        </tr>
+        <tr>
+            <td>core2.ipgoy.im</td>
+            <td>Up</td>
+            <td>87 days</td>
+            <td>0.08</td>
+        </tr>
+        <tr>
+            <td>edge1.ipgoy.im</td>
+            <td>Up</td>
+            <td>12 days</td>
+            <td>1.45</td>
+        </tr>
+    </table>
+    
+    <h2>IPv6 Test</h2>
+    <form action="#">
+        <p>Enter an IPv6 address to test:</p>
+        <input type="text" name="ipv6" placeholder="2001:db8::1">
+        <input type="submit" value="Test">
+    </form>
+    
+    <pre>
+PING 2001:db8::1(2001:db8::1) 56 data bytes
+64 bytes from 2001:db8::1: icmp_seq=1 ttl=64 time=0.123 ms
+64 bytes from 2001:db8::1: icmp_seq=2 ttl=64 time=0.098 ms
+64 bytes from 2001:db8::1: icmp_seq=3 ttl=64 time=0.101 ms
+
+--- 2001:db8::1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2000ms
+rtt min/avg/max/mdev = 0.098/0.107/0.123/0.012 ms
+    </pre>
+    
+    <div class="box">
+        <div class="box-title">About ipgoy.im</div>
+        <p>This site is powered by:</p>
+        <ul>
+            <li>FreeBSD 6.1</li>
+            <li>Apache 2.0</li>
+            <li>PHP 5.1</li>
+            <li>MySQL 5.0</li>
+        </ul>
+        <p>Best viewed with <a href="#">Firefox 1.5</a> or <a href="#">Internet Explorer 6</a> at 1024x768 resolution.</p>
+    </div>
+    
+    <div class="footer">
+        &copy; 2006 ipgoy.im - All rights reserved.<br>
+        Page generated in 0.023 seconds.
+    </div>
+</body>
+</html>
