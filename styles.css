@@ -1,0 +1,205 @@
+/* === Old School 2006 Hurricane Electric Style === */
+:root {
+  --bg-color: #f0f0f0;
+  --text-color: #000000;
+  --link-color: #0000ee;
+  --visited-link: #551a8b;
+  --active-link: #ee0000;
+  --header-bg: #0066cc;
+  --header-text: #ffffff;
+  --table-border: #000000;
+  --table-header: #cccccc;
+  --table-row-odd: #f0f0f0;
+  --table-row-even: #e0e0e0;
+  --input-bg: #ffffff;
+  --input-border: #000000;
+  --button-bg: #cccccc;
+  --button-text: #000000;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-color: #121212;
+    --text-color: #e0e0e0;
+    --link-color: #7f9fff;
+    --visited-link: #b57feb;
+    --active-link: #ff7f7f;
+    --header-bg: #004080;
+    --header-text: #ffffff;
+    --table-border: #555555;
+    --table-header: #333333;
+    --table-row-odd: #252525;
+    --table-row-even: #1a1a1a;
+    --input-bg: #222222;
+    --input-border: #555555;
+    --button-bg: #333333;
+    --button-text: #e0e0e0;
+  }
+}
+
+body {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-color);
+  background-color: var(--bg-color);
+  margin: 0;
+  padding: 0;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+a {
+  color: var(--link-color);
+  text-decoration: underline;
+}
+
+a:visited {
+  color: var(--visited-link);
+}
+
+a:hover, a:active {
+  color: var(--active-link);
+  text-decoration: none;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text-color);
+}
+
+h1 {
+  font-size: 24px;
+  background-color: var(--header-bg);
+  color: var(--header-text);
+  padding: 10px;
+  margin: 0 0 20px 0;
+}
+
+h2 {
+  font-size: 20px;
+  border-bottom: 1px solid var(--text-color);
+  padding-bottom: 5px;
+  margin: 20px 0 10px 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+  border: 1px solid var(--table-border);
+}
+
+th {
+  background-color: var(--table-header);
+  text-align: left;
+  padding: 5px;
+  border: 1px solid var(--table-border);
+}
+
+td {
+  padding: 5px;
+  border: 1px solid var(--table-border);
+}
+
+tr:nth-child(odd) {
+  background-color: var(--table-row-odd);
+}
+
+tr:nth-child(even) {
+  background-color: var(--table-row-even);
+}
+
+input, textarea, select {
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  padding: 3px;
+  font-family: "Courier New", Courier, monospace;
+  color: var(--text-color);
+}
+
+button, input[type="submit"], input[type="button"] {
+  background-color: var(--button-bg);
+  color: var(--button-text);
+  border: 1px solid var(--input-border);
+  padding: 3px 10px;
+  cursor: pointer;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+button:hover, input[type="submit"]:hover, input[type="button"]:hover {
+  background-color: var(--header-bg);
+  color: var(--header-text);
+}
+
+pre, code {
+  font-family: "Courier New", Courier, monospace;
+  background-color: var(--table-row-odd);
+  padding: 2px 5px;
+  border: 1px solid var(--input-border);
+}
+
+pre {
+  padding: 10px;
+  overflow: auto;
+}
+
+hr {
+  border: 0;
+  height: 1px;
+  background-color: var(--text-color);
+  margin: 20px 0;
+}
+
+/* === Classic 2000s Navigation === */
+.navbar {
+  background-color: var(--header-bg);
+  padding: 5px 10px;
+  margin-bottom: 20px;
+}
+
+.navbar a {
+  color: var(--header-text);
+  text-decoration: none;
+  margin-right: 15px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: bold;
+}
+
+.navbar a:hover {
+  text-decoration: underline;
+}
+
+/* === Old School Box === */
+.box {
+  border: 1px solid var(--table-border);
+  margin: 10px 0;
+  padding: 10px;
+  background-color: var(--table-row-odd);
+}
+
+.box-title {
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: var(--header-text);
+  background-color: var(--header-bg);
+  padding: 5px 10px;
+  margin: -10px -10px 10px -10px;
+}
+
+/* === Footer === */
+.footer {
+  margin-top: 30px;
+  padding-top: 10px;
+  border-top: 1px solid var(--text-color);
+  font-size: 12px;
+  text-align: center;
+  color: #666666;
+}
+
+@media (prefers-color-scheme: dark) {
+  .footer {
+    color: #999999;
+  }
+}
