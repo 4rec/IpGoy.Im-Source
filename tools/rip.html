@@ -75,6 +75,11 @@
             margin: 10px 0;
             word-break: break-all;
         }
+        .warning {
+            color: #ff9900;
+            font-style: italic;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -98,6 +103,7 @@
             <div class="form-group">
                 <label for="country-code">2-letter Country Code (e.g., US, GB, JP):</label>
                 <input type="text" id="country-code" placeholder="Enter country code..." maxlength="2">
+                <div class="warning">Note: Not all countries may have IPv6 ranges available</div>
             </div>
             <button id="generate-btn">Generate Random IP</button>
             <div id="loading" class="loading">Fetching CIDR ranges...</div>
@@ -195,33 +201,29 @@
                 }
 
                 const text = await response.text();
-                const lines = text.split('\n');
+                const cidrBlocks = text.split('\n')
+                    .filter(line => line.trim() && !line.startsWith('#'))
+                    .map(line => line.trim());
 
-                // Filter out empty lines and comments
-                const cidrBlocks = lines.filter(line => line.trim() && !line.startsWith('#')).map(line => line.trim());
-                
                 if (cidrBlocks.length === 0) {
                     throw new Error(`No CIDR blocks found for ${countryCode}`);
                 }
 
-                // Select random CIDR block
                 const randomCidr = cidrBlocks[Math.floor(Math.random() * cidrBlocks.length)];
-                
-                // Generate random IP from CIDR block
                 let randomIP;
-                try {
-                    if (currentVersion === 'ipv4') {
-                        const network = parseIPv4Network(randomCidr);
-                        randomIP = generateRandomIPv4(network);
-                    } else {
-                        const network = parseIPv6Network(randomCidr);
+                
+                if (currentVersion === 'ipv4') {
+                    const network = parseIPv4Network(randomCidr);
+                    randomIP = generateRandomIPv4(network);
+                } else {
+                    try {
+                        const network = ipv6Network(randomCidr);
                         randomIP = generateRandomIPv6(network);
+                    } catch (e) {
+                        throw new Error(`Invalid IPv6 CIDR format: ${randomCidr}`);
                     }
-                } catch (e) {
-                    throw new Error(`Invalid CIDR block format: ${randomCidr}`);
                 }
 
-                // Display results
                 document.getElementById('country-display').textContent = `Country: ${countryCode}`;
                 document.getElementById('cidr-display').textContent = `CIDR Block: ${randomCidr}`;
                 document.getElementById('random-ip').textContent = `Random IP: ${randomIP}`;
@@ -248,14 +250,36 @@
             };
         }
 
-        function parseIPv6Network(cidr) {
-            // This is a simplified IPv6 parser - in a real app you'd want a more robust solution
-            const [ip, prefix] = cidr.split('/');
+        function ipv6Network(cidr) {
+            if (!cidr.includes('/')) {
+                throw new Error('Missing prefix length');
+            }
+            
+            const [address, prefixLength] = cidr.split('/');
+            const prefix = parseInt(prefixLength);
+            
+            if (isNaN(prefix) || prefix < 0 || prefix > 128) {
+                throw new Error('Invalid prefix length (must be 0-128)');
+            }
+            
             return {
-                network: ip,
-                prefixLength: parseInt(prefix),
-                isIPv6: true
+                address: normalizeIPv6(address),
+                prefixLength: prefix
             };
+        }
+
+        function normalizeIPv6(address) {
+            // Handle :: compression
+            if (address.includes('::')) {
+                const parts = address.split('::');
+                const left = parts[0].split(':').filter(p => p);
+                const right = parts[1].split(':').filter(p => p);
+                const missing = 8 - (left.length + right.length);
+                
+                const expanded = left.concat(Array(missing).fill('0')).concat(right);
+                return expanded.join(':');
+            }
+            return address;
         }
 
         function generateRandomIPv4(network) {
@@ -265,33 +289,86 @@
         }
 
         function generateRandomIPv6(network) {
-            // This is a simplified IPv6 generator - generates a random address within the range
-            // Note: This doesn't properly handle all IPv6 CIDR cases
-            const parts = network.network.split(':');
-            const hextets = [];
+            const fullAddress = expandIPv6(network.address);
+            const hextets = fullAddress.split(':').map(h => parseInt(h, 16));
             
-            // Fill in missing parts
-            while (parts.length < 8) {
-                parts.splice(parts.indexOf(''), 1, '0');
+            // Calculate which hextets we need to randomize
+            const fixedHextets = Math.floor(network.prefixLength / 16);
+            const fixedBits = network.prefixLength % 16;
+            
+            // Randomize the variable parts
+            for (let i = fixedHextets; i < 8; i++) {
+                let randomValue;
+                
+                if (i === fixedHextets && fixedBits > 0) {
+                    // First variable hextet needs to preserve some bits
+                    const mask = 0xffff >>> (16 - fixedBits);
+                    const fixedPart = hextets[i] & (mask << (16 - fixedBits));
+                    randomValue = fixedPart | (Math.floor(Math.random() * (1 << (16 - fixedBits))));
+                } else if (i > fixedHextets) {
+                    // Completely random hextet
+                    randomValue = Math.floor(Math.random() * 0x10000);
+                } else {
+                    continue;
+                }
+                
+                hextets[i] = randomValue;
             }
             
-            // Generate random hextets
-            for (let i = 0; i < 8; i++) {
-                if (parts[i] === '') {
-                    hextets.push(Math.floor(Math.random() * 0x10000).toString(16));
+            // Convert back to IPv6 format
+            const ipv6 = hextets.map(h => h.toString(16).padStart(4, '0')).join(':');
+            
+            // Compress the address (replace longest sequence of zeros with ::)
+            return compressIPv6(ipv6);
+        }
+
+        function expandIPv6(address) {
+            const parts = address.split(':');
+            const expanded = [];
+            let zeroCompression = false;
+            
+            for (const part of parts) {
+                if (part === '') {
+                    if (!zeroCompression) {
+                        expanded.push(...Array(8 - parts.length + 1).fill('0'));
+                        zeroCompression = true;
+                    }
                 } else {
-                    hextets.push(parts[i]);
+                    expanded.push(part.padStart(4, '0'));
                 }
             }
             
-            // Randomize the last parts based on prefix length
-            const randomParts = Math.max(0, 8 - Math.ceil(network.prefixLength / 16));
-            for (let i = 8 - randomParts; i < 8; i++) {
-                hextets[i] = Math.floor(Math.random() * 0x10000).toString(16);
+            return expanded.join(':');
+        }
+
+        function compressIPv6(address) {
+            const parts = address.split(':');
+            let longestStart = -1;
+            let longestLength = 0;
+            let currentStart = -1;
+            
+            for (let i = 0; i < parts.length; i++) {
+                if (parts[i] === '0000') {
+                    if (currentStart === -1) {
+                        currentStart = i;
+                    }
+                    
+                    if (i - currentStart + 1 > longestLength) {
+                        longestLength = i - currentStart + 1;
+                        longestStart = currentStart;
+                    }
+                } else {
+                    currentStart = -1;
+                }
             }
             
-            // Format as IPv6 address
-            return hextets.map(part => part.padStart(4, '0')).join(':').replace(/(^|:)0+/g, '$1').replace(/:{3,}/, '::');
+            if (longestLength > 1) {
+                const before = parts.slice(0, longestStart).join(':');
+                const after = parts.slice(longestStart + longestLength).join(':');
+                return (before + '::' + after).replace(/^:|:$/g, '');
+            }
+            
+            return address;
         }
 
         function ipv4ToInt(ip) {
