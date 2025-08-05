@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random ASN by Country | ipgoy.im</title>
+    <link rel="stylesheet" href="https://ipgoy.im/styles.css">
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .result-box {
+            margin-top: 20px;
+            display: none;
+        }
+        .error-box {
+            margin-top: 20px;
+            display: none;
+            background-color: var(--active-link);
+            color: white;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .site-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .site-logo {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--header-bg);
+            margin-bottom: 10px;
+        }
+        .loading {
+            display: none;
+            margin: 10px 0;
+            font-style: italic;
+        }
+        .asn-info {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: var(--table-row-odd);
+            border: 1px solid var(--table-border);
+        }
+        .asn-table {
+            width: 100%;
+            margin-top: 10px;
+        }
+        .asn-table th {
+            background-color: var(--table-header);
+            text-align: left;
+            padding: 5px;
+        }
+        .asn-table td {
+            padding: 5px;
+            border: 1px solid var(--table-border);
+        }
+        .refresh-btn {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="https://ipgoy.im">Home</a>
+    </div>
+
+    <div class="container">
+        <div class="site-header">
+            <div class="site-logo">ipgoy.im</div>
+            <h1>Random ASN by Country</h1>
+        </div>
+        
+        <div class="box">
+            <div class="box-title">Search Country</div>
+            <div class="form-group">
+                <label for="country-code">2-letter Country Code (e.g., US, GB, JP):</label>
+                <input type="text" id="country-code" placeholder="Enter country code..." maxlength="2">
+            </div>
+            <button id="lookup-btn">Get Random ASN</button>
+            <div id="loading" class="loading">Fetching ASN list...</div>
+        </div>
+
+        <div id="error-box" class="box error-box">
+            <div class="box-title">Error</div>
+            <div id="error-message"></div>
+        </div>
+
+        <div id="result-box" class="box result-box">
+            <div class="box-title">Random ASN</div>
+            <div id="result-content">
+                <div class="asn-info">
+                    <h3 id="result-title"></h3>
+                    <table class="asn-table">
+                        <tr>
+                            <th>AS Number</th>
+                            <td id="asn-number"></td>
+                        </tr>
+                        <tr>
+                            <th>Organization</th>
+                            <td id="asn-org"></td>
+                        </tr>
+                        <tr id="ips-row" style="display: none;">
+                            <th>IPs Assigned</th>
+                            <td id="asn-ips"></td>
+                        </tr>
+                    </table>
+                    <button id="refresh-btn" class="refresh-btn">Get Another Random ASN</button>
+                </div>
+                
+                <div id="asn-list-section" style="display: none;">
+                    <h3>Available ASNs</h3>
+                    <div id="asn-list-container" style="max-height: 300px; overflow-y: auto;">
+                        <table class="asn-table">
+                            <thead>
+                                <tr>
+                                    <th>ASN</th>
+                                    <th>Organization</th>
+                                    <th>IPs</th>
+                                </tr>
+                            </thead>
+                            <tbody id="asn-list">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="footer" style="margin-top: 15px;">
+                Data from whoisrequest.com | Made by rec :3
+            </div>
+        </div>
+
+        <div class="footer">
+            <a href="https://ipgoy.im">ipgoy.im</a> | Made by rec :3
+        </div>
+    </div>
+
+    <script>
+        let currentCountry = '';
+        let currentAsns = [];
+        
+        document.getElementById('lookup-btn').addEventListener('click', fetchAsns);
+        document.getElementById('refresh-btn').addEventListener('click', showRandomAsn);
+        document.getElementById('country-code').addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                fetchAsns();
+            }
+        });
+
+        async function fetchAsns() {
+            const countryCode = document.getElementById('country-code').value.trim().toUpperCase();
+            const errorBox = document.getElementById('error-box');
+            const resultBox = document.getElementById('result-box');
+            const loading = document.getElementById('loading');
+            
+            // Hide boxes and show loading
+            errorBox.style.display = 'none';
+            resultBox.style.display = 'none';
+            loading.style.display = 'block';
+
+            if (!countryCode) {
+                showError("Please provide a country code. Example: US, GB, JP");
+                loading.style.display = 'none';
+                return;
+            }
+
+            // Validate country code
+            if (countryCode.length !== 2 || !/^[A-Z]+$/.test(countryCode)) {
+                showError("Invalid country code. Please use 2-letter codes like US, GB, JP");
+                loading.style.display = 'none';
+                return;
+            }
+
+            try {
+                const url = `https://whoisrequest.com/ip/${countryCode.toLowerCase()}`;
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`Couldn't fetch ASN list (HTTP ${response.status})`);
+                }
+
+                const html = await response.text();
+                
+                // Parse the HTML to find ASN table
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const table = doc.querySelector('table.table.table-hover.table-bordered.table-striped');
+                
+                if (!table) {
+                    throw new Error(`No ASN table found for ${countryCode}`);
+                }
+
+                // Extract ASNs from table
+                const asns = [];
+                const rows = table.querySelectorAll('tr');
+                
+                for (let i = 1; i < rows.length; i++) {
+                    const cols = rows[i].querySelectorAll('td');
+                    if (cols.length >= 2) {
+                        const asn = cols[0].textContent.trim();
+                        const org = cols[1].textContent.trim();
+                        const ips = cols.length > 2 ? cols[2].textContent.trim() : "N/A";
+                        
+                        if (asn) {
+                            asns.push({
+                                asn: asn,
+                                org: org,
+                                ips: ips
+                            });
+                        }
+                    }
+                }
+
+                if (asns.length === 0) {
+                    throw new Error(`No ASNs found for ${countryCode}`);
+                }
+
+                // Store for later use
+                currentCountry = countryCode;
+                currentAsns = asns;
+                
+                // Show random ASN
+                showRandomAsn();
+                
+                // Show full ASN list (limited to 50 for performance)
+                const asnListSection = document.getElementById('asn-list-section');
+                const asnList = document.getElementById('asn-list');
+                asnList.innerHTML = '';
+                
+                const displayAsns = asns.slice(0, 50);
+                displayAsns.forEach(asn => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${asn.asn}</td>
+                        <td>${asn.org}</td>
+                        <td>${asn.ips}</td>
+                    `;
+                    asnList.appendChild(row);
+                });
+                
+                if (asns.length > 50) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td colspan="3">...and ${asns.length - 50} more</td>`;
+                    asnList.appendChild(row);
+                }
+                
+                asnListSection.style.display = 'block';
+                resultBox.style.display = 'block';
+            } catch (error) {
+                showError(`Failed to fetch ASN data: ${error.message}`);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function showRandomAsn() {
+            if (currentAsns.length === 0) return;
+            
+            const randomAsn = currentAsns[Math.floor(Math.random() * currentAsns.length)];
+            
+            document.getElementById('result-title').textContent = 
+                `Random ASN from ${currentCountry}`;
+            document.getElementById('asn-number').textContent = randomAsn.asn;
+            document.getElementById('asn-org').textContent = randomAsn.org;
+            
+            const ipsRow = document.getElementById('ips-row');
+            const ipsCell = document.getElementById('asn-ips');
+            if (randomAsn.ips !== "N/A") {
+                ipsCell.textContent = randomAsn.ips;
+                ipsRow.style.display = '';
+            } else {
+                ipsRow.style.display = 'none';
+            }
+            
+            // Ensure result box is visible
+            document.getElementById('result-box').style.display = 'block';
+        }
+
+        function showError(message) {
+            const errorBox = document.getElementById('error-box');
+            document.getElementById('error-message').textContent = message;
+            errorBox.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
