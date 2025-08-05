@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Country Lookup | ipgoy.im</title>
+    <link rel="stylesheet" href="https://ipgoy.im/styles.css">
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .result-box {
+            margin-top: 20px;
+            display: none;
+        }
+        .error-box {
+            margin-top: 20px;
+            display: none;
+            background-color: var(--active-link);
+            color: white;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .site-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .site-logo {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--header-bg);
+            margin-bottom: 10px;
+        }
+        .loading {
+            display: none;
+            margin: 10px 0;
+            font-style: italic;
+        }
+        .country-flag {
+            max-width: 120px;
+            border: 1px solid var(--table-border);
+            margin: 0 auto 10px auto;
+            display: block;
+        }
+        .country-title {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .map-link {
+            text-align: center;
+            margin-top: 10px;
+        }
+        .info-section {
+            margin-bottom: 15px;
+        }
+        .info-section h3 {
+            border-bottom: 1px solid var(--text-color);
+            padding-bottom: 3px;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="https://ipgoy.im">Home</a>
+    </div>
+
+    <div class="container">
+        <div class="site-header">
+            <div class="site-logo">ipgoy.im</div>
+            <h1>Country Lookup</h1>
+        </div>
+        
+        <div class="box">
+            <div class="box-title">Search Country</div>
+            <div class="form-group">
+                <label for="country-code">2-letter Country Code (e.g., US, GB, JP):</label>
+                <input type="text" id="country-code" placeholder="Enter country code..." maxlength="2">
+            </div>
+            <button id="lookup-btn">Lookup Country</button>
+            <div id="loading" class="loading">Fetching country information...</div>
+        </div>
+
+        <div id="error-box" class="box error-box">
+            <div class="box-title">Error</div>
+            <div id="error-message"></div>
+        </div>
+
+        <div id="result-box" class="box result-box">
+            <div class="box-title">Country Information</div>
+            <div id="result-content">
+                <div class="country-title">
+                    <h2 id="country-name"></h2>
+                    <img id="country-flag" class="country-flag" src="" alt="Country Flag">
+                </div>
+                
+                <div class="info-section">
+                    <h3>Basic Information</h3>
+                    <table>
+                        <tr>
+                            <td><strong>Official Name</strong></td>
+                            <td id="official-name"></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Capital</strong></td>
+                            <td id="capital"></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Region</strong></td>
+                            <td id="region"></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Population</strong></td>
+                            <td id="population"></td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <div class="info-section">
+                    <h3>Additional Information</h3>
+                    <table>
+                        <tr id="languages-row" style="display: none;">
+                            <td><strong>Languages</strong></td>
+                            <td id="languages"></td>
+                        </tr>
+                        <tr id="currencies-row" style="display: none;">
+                            <td><strong>Currencies</strong></td>
+                            <td id="currencies"></td>
+                        </tr>
+                        <tr id="timezones-row" style="display: none;">
+                            <td><strong>Timezones</strong></td>
+                            <td id="timezones"></td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <div id="map-link" class="map-link" style="display: none;">
+                    <a id="google-maps" href="#" target="_blank">View on Google Maps</a>
+                </div>
+            </div>
+            <div class="footer" style="margin-top: 15px;">
+                Data from restcountries.com | Made by rec :3
+            </div>
+        </div>
+
+        <div class="footer">
+            <a href="https://ipgoy.im">ipgoy.im</a> | Made by rec :3
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('lookup-btn').addEventListener('click', lookupCountry);
+        document.getElementById('country-code').addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                lookupCountry();
+            }
+        });
+
+        async function lookupCountry() {
+            const countryCode = document.getElementById('country-code').value.trim().toUpperCase();
+            const errorBox = document.getElementById('error-box');
+            const resultBox = document.getElementById('result-box');
+            const loading = document.getElementById('loading');
+            
+            // Hide boxes and show loading
+            errorBox.style.display = 'none';
+            resultBox.style.display = 'none';
+            loading.style.display = 'block';
+
+            if (!countryCode) {
+                showError("Please provide a country code. Example: US, GB, JP");
+                loading.style.display = 'none';
+                return;
+            }
+
+            // Validate country code
+            if (countryCode.length !== 2 || !/^[A-Z]+$/.test(countryCode)) {
+                showError("Invalid country code. Please use 2-letter codes like US, GB, JP");
+                loading.style.display = 'none';
+                return;
+            }
+
+            try {
+                const url = `https://restcountries.com/v3.1/alpha/${countryCode}`;
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        throw new Error(`Country code ${countryCode} not found`);
+                    } else {
+                        throw new Error(`API returned status ${response.status}`);
+                    }
+                }
+
+                const data = await response.json();
+                const country = data[0];
+                
+                // Display results
+                document.getElementById('country-name').textContent = 
+                    `${country.name?.common || 'N/A'} (${countryCode})`;
+                
+                // Set flag image
+                const flagImg = document.getElementById('country-flag');
+                if (country.flags?.png) {
+                    flagImg.src = country.flags.png;
+                    flagImg.style.display = 'block';
+                } else {
+                    flagImg.style.display = 'none';
+                }
+                
+                // Basic info
+                document.getElementById('official-name').textContent = country.name?.official || 'N/A';
+                document.getElementById('capital').textContent = 
+                    country.capital ? country.capital.join(', ') : 'N/A';
+                document.getElementById('region').textContent = 
+                    `${country.region || 'N/A'}${country.subregion ? ` (${country.subregion})` : ''}`;
+                document.getElementById('population').textContent = 
+                    country.population ? country.population.toLocaleString() : 'N/A';
+                
+                // Additional info
+                showIfAvailable('languages-row', 'languages', 
+                    country.languages ? Object.values(country.languages).join(', ') : null);
+                showIfAvailable('currencies-row', 'currencies', 
+                    country.currencies ? formatCurrencies(country.currencies) : null);
+                showIfAvailable('timezones-row', 'timezones', 
+                    country.timezones ? country.timezones.join(', ') : null);
+                
+                // Map link
+                const mapLink = document.getElementById('map-link');
+                const googleMaps = document.getElementById('google-maps');
+                if (country.maps?.googleMaps) {
+                    googleMaps.href = country.maps.googleMaps;
+                    mapLink.style.display = 'block';
+                } else {
+                    mapLink.style.display = 'none';
+                }
+                
+                resultBox.style.display = 'block';
+            } catch (error) {
+                showError(`Failed to fetch country data: ${error.message}`);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function formatCurrencies(currencies) {
+            return Object.entries(currencies)
+                .map(([code, info]) => `${info.name} (${info.symbol || code})`)
+                .join(', ');
+        }
+
+        function showIfAvailable(rowId, elementId, value) {
+            const row = document.getElementById(rowId);
+            const element = document.getElementById(elementId);
+            
+            if (value) {
+                element.textContent = value;
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        }
+
+        function showError(message) {
+            const errorBox = document.getElementById('error-box');
+            document.getElementById('error-message').textContent = message;
+            errorBox.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
