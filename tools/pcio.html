@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proxy/VPN Checker | ipgoy.im</title>
+    <link rel="stylesheet" href="https://ipgoy.im/styles.css">
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .result-box {
+            margin-top: 20px;
+            display: none;
+        }
+        .error-box {
+            margin-top: 20px;
+            display: none;
+            background-color: var(--active-link);
+            color: white;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .site-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .site-logo {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--header-bg);
+            margin-bottom: 10px;
+        }
+        .loading {
+            display: none;
+            margin: 10px 0;
+            font-style: italic;
+        }
+        .proxy-status {
+            font-weight: bold;
+        }
+        .proxy-yes {
+            color: #ff5555;
+        }
+        .proxy-no {
+            color: #55ff55;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="https://ipgoy.im">Home</a>
+    </div>
+
+    <div class="container">
+        <div class="site-header">
+            <div class="site-logo">ipgoy.im</div>
+            <h1>Proxy/VPN Checker</h1>
+        </div>
+        
+        <div class="box">
+            <div class="box-title">Check IP Address</div>
+            <div class="form-group">
+                <label for="ip-address">IP Address (IPv4 or IPv6):</label>
+                <input type="text" id="ip-address" placeholder="Enter IP address...">
+            </div>
+            <button id="check-btn">Check Proxy/VPN Status</button>
+            <div id="loading" class="loading">Checking with proxycheck.io...</div>
+        </div>
+
+        <div id="error-box" class="box error-box">
+            <div class="box-title">Error</div>
+            <div id="error-message"></div>
+        </div>
+
+        <div id="result-box" class="box result-box">
+            <div class="box-title">Proxy/VPN Check Results</div>
+            <table>
+                <tr>
+                    <td><strong>IP Address</strong></td>
+                    <td id="result-ip"></td>
+                </tr>
+                <tr>
+                    <td><strong>Proxy/VPN</strong></td>
+                    <td id="result-proxy" class="proxy-status"></td>
+                </tr>
+                <tr id="result-type-row" style="display: none;">
+                    <td><strong>Type</strong></td>
+                    <td id="result-type"></td>
+                </tr>
+                <tr id="result-provider-row" style="display: none;">
+                    <td><strong>Provider</strong></td>
+                    <td id="result-provider"></td>
+                </tr>
+                <tr id="result-org-row" style="display: none;">
+                    <td><strong>Organization</strong></td>
+                    <td id="result-org"></td>
+                </tr>
+                <tr id="result-risk-row" style="display: none;">
+                    <td><strong>Risk Score</strong></td>
+                    <td id="result-risk"></td>
+                </tr>
+            </table>
+            <div class="footer" style="margin-top: 15px;">
+                Data from proxycheck.io | Made by rec :3
+            </div>
+        </div>
+
+        <div class="footer">
+            <a href="https://ipgoy.im">ipgoy.im</a> | Made by rec :3
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('check-btn').addEventListener('click', checkProxy);
+
+        async function checkProxy() {
+            const ipAddress = document.getElementById('ip-address').value.trim();
+            const errorBox = document.getElementById('error-box');
+            const resultBox = document.getElementById('result-box');
+            const loading = document.getElementById('loading');
+            
+            // Hide boxes and show loading
+            errorBox.style.display = 'none';
+            resultBox.style.display = 'none';
+            loading.style.display = 'block';
+
+            if (!ipAddress) {
+                showError("Please provide an IP address. Example: 45.141.123.207");
+                loading.style.display = 'none';
+                return;
+            }
+
+            // Validate IP format
+            if (!isValidIP(ipAddress)) {
+                showError("Invalid IP address format");
+                loading.style.display = 'none';
+                return;
+            }
+
+            try {
+                const url = `https://proxycheck.io/v2/${ipAddress}?vpn=1`;
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`proxycheck.io returned status ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.status !== 'ok') {
+                    throw new Error(`proxycheck.io returned status: ${data.status || 'unknown'}`);
+                }
+
+                const ipInfo = data[ipAddress] || {};
+                
+                // Display results
+                document.getElementById('result-ip').textContent = ipAddress;
+                
+                // Set proxy status with styling
+                const proxyStatus = ipInfo.proxy || 'no';
+                const proxyElement = document.getElementById('result-proxy');
+                proxyElement.textContent = proxyStatus.toUpperCase();
+                proxyElement.className = proxyStatus === 'yes' ? 'proxy-status proxy-yes' : 'proxy-status proxy-no';
+                
+                // Show additional fields if available
+                showIfAvailable('result-type-row', 'result-type', ipInfo.type);
+                showIfAvailable('result-provider-row', 'result-provider', ipInfo.provider);
+                showIfAvailable('result-org-row', 'result-org', ipInfo.organisation);
+                showIfAvailable('result-risk-row', 'result-risk', ipInfo.risk ? `${ipInfo.risk}%` : null);
+                
+                resultBox.style.display = 'block';
+            } catch (error) {
+                showError(`Failed to check IP: ${error.message}`);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function showIfAvailable(rowId, elementId, value) {
+            const row = document.getElementById(rowId);
+            const element = document.getElementById(elementId);
+            
+            if (value) {
+                element.textContent = value;
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        }
+
+        function isValidIP(ip) {
+            // Simple IPv4 validation
+            const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+            if (ipv4Regex.test(ip)) {
+                const octets = ip.split('.');
+                for (const octet of octets) {
+                    const num = parseInt(octet);
+                    if (num < 0 || num > 255) return false;
+                }
+                return true;
+            }
+            
+            // Simple IPv6 validation
+            const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::([0-9a-fA-F]{1,4}:){0,6}[0-9a-fA-F]{1,4}$|^[0-9a-fA-F]{1,4}::([0-9a-fA-F]{1,4}:){0,5}[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:){1,2}:([0-9a-fA-F]{1,4}:){0,4}[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:){1,3}:([0-9a-fA-F]{1,4}:){0,3}[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:){1,4}:([0-9a-fA-F]{1,4}:){0,2}[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:){1,5}:([0-9a-fA-F]{1,4}:){0,1}[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:){1,7}:$/;
+            return ipv6Regex.test(ip);
+        }
+
+        function showError(message) {
+            const errorBox = document.getElementById('error-box');
+            document.getElementById('error-message').textContent = message;
+            errorBox.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
