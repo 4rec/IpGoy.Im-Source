@@ -168,7 +168,7 @@
             }
 
             try {
-                const url = `https://api.bgpview.io/asn/${asnNumber}/peers`;
+                const url = `https://corsproxy.io/?url=https://api.bgpview.io/asn/${asnNumber}/peers`;
                 const response = await fetch(url);
                 
                 if (!response.ok) {
