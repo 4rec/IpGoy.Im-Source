@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geolocation Comparison | ipgoy.im</title>
+    <link rel="stylesheet" href="https://ipgoy.im/styles.css">
+    <style>
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .result-box {
+            margin-top: 20px;
+            display: none;
+        }
+        .error-box {
+            margin-top: 20px;
+            display: none;
+            background-color: var(--active-link);
+            color: white;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .site-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .site-logo {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--header-bg);
+            margin-bottom: 10px;
+        }
+        .loading {
+            display: none;
+            margin: 10px 0;
+            font-style: italic;
+        }
+        .api-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .api-card {
+            border: 1px solid var(--table-border);
+            padding: 10px;
+            background-color: var(--table-row-odd);
+        }
+        .api-card.error {
+            background-color: var(--active-link);
+            color: white;
+        }
+        .api-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .api-status {
+            margin-bottom: 5px;
+        }
+        .api-flag {
+            font-size: 24px;
+            text-align: center;
+            margin: 5px 0;
+        }
+        .api-details {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        .summary {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: var(--table-row-even);
+            border: 1px solid var(--table-border);
+            text-align: center;
+        }
+        .summary-flag {
+            font-size: 32px;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="https://ipgoy.im">Home</a>
+    </div>
+
+    <div class="container">
+        <div class="site-header">
+            <div class="site-logo">ipgoy.im</div>
+            <h1>Geolocation Comparison</h1>
+        </div>
+        
+        <div class="box">
+            <div class="box-title">Compare IP Geolocation</div>
+            <div class="form-group">
+                <label for="ip-address">IP Address (IPv4):</label>
+                <input type="text" id="ip-address" placeholder="Enter IP address (e.g., 8.8.8.8)">
+            </div>
+            <button id="compare-btn">Compare APIs</button>
+            <div id="loading" class="loading">Fetching data from APIs...</div>
+        </div>
+
+        <div id="error-box" class="box error-box">
+            <div class="box-title">Error</div>
+            <div id="error-message"></div>
+        </div>
+
+        <div id="result-box" class="box result-box">
+            <div class="box-title">Geolocation Results</div>
+            <div id="summary" class="summary">
+                <div id="success-count"></div>
+                <div id="consensus-flag" class="summary-flag"></div>
+            </div>
+            <div id="api-grid" class="api-grid"></div>
+            <div class="footer" style="margin-top: 15px;">
+                Data from multiple geolocation APIs | Made by rec :3
+            </div>
+        </div>
+
+        <div class="footer">
+            <a href="https://ipgoy.im">ipgoy.im</a> | Made by rec :3
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('compare-btn').addEventListener('click', compareGeolocation);
+        document.getElementById('ip-address').addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                compareGeolocation();
+            }
+        });
+
+        const apis = [
+            { name: "ipapi.is", url: "https://api.ipapi.is/?q={ip}" },
+            { name: "ipapi.co", url: "https://ipapi.co/{ip}/json/" },
+            { name: "ipbase.com", url: "https://api.ipbase.com/v2/info?ip={ip}" },
+            { name: "freeipapi.com", url: "https://freeipapi.com/api/json/{ip}" },
+            { name: "country.is", url: "https://api.country.is/{ip}" },
+            { name: "ipinfo.io", url: "https://ipinfo.io/{ip}/geo" },
+            { name: "ipwho.is", url: "https://ipwho.is/{ip}" },
+            { name: "nyanc4tt.xyz", url: "https://nyanc4tt.xyz/api/iplookup?ip={ip}" },
+            { name: "nanoxyte.xyz", url: "https://nanoxyte.xyz/api/iplookup?ip={ip}" }
+        ];
+
+        async function compareGeolocation() {
+            const ipAddress = document.getElementById('ip-address').value.trim();
+            const errorBox = document.getElementById('error-box');
+            const resultBox = document.getElementById('result-box');
+            const loading = document.getElementById('loading');
+            
+            // Hide boxes and show loading
+            errorBox.style.display = 'none';
+            resultBox.style.display = 'none';
+            loading.style.display = 'block';
+
+            // Basic IP validation
+            const parts = ipAddress.split('.');
+            if (parts.length !== 4 || !parts.every(part => {
+                const num = parseInt(part);
+                return !isNaN(num) && num >= 0 && num <= 255;
+            })) {
+                showError("Invalid IPv4 address format. Please use format like 8.8.8.8");
+                loading.style.display = 'none';
+                return;
+            }
+
+            try {
+                // Fetch all API data concurrently
+                const apiPromises = apis.map(api => fetchApiData(api, ipAddress));
+                const results = await Promise.all(apiPromises);
+
+                // Count successful fetches and country codes
+                const successCount = results.filter(r => !r.error).length;
+                const countryCounts = {};
+                const countryDetails = {};
+
+                results.forEach(result => {
+                    const countryCode = getCountryCode(result);
+                    if (countryCode !== "N/A") {
+                        countryCounts[countryCode] = (countryCounts[countryCode] || 0) + 1;
+                        countryDetails[countryCode] = {
+                            country: result.country || "Unknown",
+                            city: result.city || "Unknown",
+                            isp: result.isp || "Unknown"
+                        };
+                    }
+                });
+
+                // Display summary
+                document.getElementById('success-count').textContent = 
+                    `${successCount}/${apis.length} APIs successfully responded`;
+                
+                const consensusFlag = document.getElementById('consensus-flag');
+                if (Object.keys(countryCounts).length > 0) {
+                    const primaryCountry = Object.entries(countryCounts)
+                        .reduce((a, b) => a[1] > b[1] ? a : b)[0];
+                    const details = countryDetails[primaryCountry];
+                    consensusFlag.textContent = getFlagEmoji(primaryCountry);
+                    consensusFlag.title = `${details.country}, ${details.city} | ${details.isp}`;
+                } else {
+                    consensusFlag.textContent = "❓";
+                    consensusFlag.title = "No consensus";
+                }
+
+                // Display API results
+                const apiGrid = document.getElementById('api-grid');
+                apiGrid.innerHTML = '';
+                
+                results.forEach(result => {
+                    const card = document.createElement('div');
+                    card.className = `api-card ${result.error ? 'error' : ''}`;
+                    
+                    const name = document.createElement('div');
+                    name.className = 'api-name';
+                    name.textContent = result.api;
+                    
+                    const status = document.createElement('div');
+                    status.className = 'api-status';
+                    status.textContent = result.error ? 'Error' : 'Success';
+                    
+                    const flag = document.createElement('div');
+                    flag.className = 'api-flag';
+                    
+                    const details = document.createElement('div');
+                    details.className = 'api-details';
+                    
+                    if (result.error) {
+                        flag.textContent = '❌';
+                        details.textContent = result.error;
+                    } else {
+                        const countryCode = getCountryCode(result);
+                        if (countryCode !== "N/A") {
+                            flag.textContent = getFlagEmoji(countryCode);
+                            flag.title = `${result.country || 'Unknown'}, ${result.city || 'Unknown'}`;
+                            
+                            let detailText = [];
+                            if (result.country) detailText.push(result.country);
+                            if (result.city) detailText.push(result.city);
+                            if (result.isp) detailText.push(`ISP: ${result.isp}`);
+                            
+                            details.textContent = detailText.join(' | ');
+                        } else {
+                            flag.textContent = '❓';
+                            details.textContent = 'No geolocation data';
+                        }
+                    }
+                    
+                    card.appendChild(name);
+                    card.appendChild(status);
+                    card.appendChild(flag);
+                    card.appendChild(details);
+                    apiGrid.appendChild(card);
+                });
+                
+                resultBox.style.display = 'block';
+            } catch (error) {
+                showError(`Failed to compare geolocation: ${error.message}`);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        async function fetchApiData(api, ip) {
+            const url = api.url.replace('{ip}', ip);
+            
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    return {
+                        api: api.name,
+                        error: `HTTP ${response.status}`,
+                        url: url
+                    };
+                }
+                
+                const data = await response.json();
+                return parseApiResponse(api.name, data);
+            } catch (error) {
+                return {
+                    api: api.name,
+                    error: error.message,
+                    url: url
+                };
+            }
+        }
+
+        function parseApiResponse(apiName, data) {
+            try {
+                switch (apiName) {
+                    case "ipapi.is":
+                        return {
+                            api: apiName,
+                            country: data.country,
+                            country_code: data.country_code,
+                            city: data.city,
+                            isp: data.connection?.isp,
+                            raw: data
+                        };
+                    case "ipapi.co":
+                        return {
+                            api: apiName,
+                            country: data.country_name,
+                            country_code: data.country_code,
+                            city: data.city,
+                            isp: data.org,
+                            raw: data
+                        };
+                    case "ipbase.com":
+                        return {
+                            api: apiName,
+                            country: data.data?.location?.country?.name,
+                            country_code: data.data?.location?.country?.alpha2,
+                            city: data.data?.location?.city?.name,
+                            isp: data.data?.connection?.isp,
+                            raw: data
+                        };
+                    case "freeipapi.com":
+                        return {
+                            api: apiName,
+                            country: data.countryName,
+                            country_code: data.countryCode,
+                            city: data.cityName,
+                            isp: data.isp,
+                            raw: data
+                        };
+                    case "country.is":
+                        return {
+                            api: apiName,
+                            country_code: data.country,
+                            raw: data
+                        };
+                    case "ipinfo.io":
+                        return {
+                            api: apiName,
+                            country: data.country,
+                            country_code: data.country,
+                            city: data.city,
+                            isp: data.org,
+                            raw: data
+                        };
+                    case "ipwho.is":
+                        return {
+                            api: apiName,
+                            country: data.country,
+                            country_code: data.country_code,
+                            city: data.city,
+                            isp: data.connection?.isp,
+                            raw: data
+                        };
+                    case "nyanc4tt.xyz":
+                    case "nanoxyte.xyz":
+                        return {
+                            api: apiName,
+                            country: data.country,
+                            country_code: data.country_code,
+                            city: data.city,
+                            isp: data.isp,
+                            raw: data
+                        };
+                    default:
+                        return {
+                            api: apiName,
+                            error: "Unknown API format",
+                            raw: data
+                        };
+                }
+            } catch (e) {
+                return {
+                    api: apiName,
+                    error: "Failed to parse response",
+                    raw: data
+                };
+            }
+        }
+
+        function getCountryCode(result) {
+            if (result.error) return "N/A";
+            return result.country_code || "N/A";
+        }
+
+        function getFlagEmoji(countryCode) {
+            if (!countryCode || countryCode === "N/A") return "❓";
+            // Convert country code to flag emoji
+            return String.fromCodePoint(...[...countryCode.toUpperCase()].map(c => 0x1F1A5 + c.charCodeAt(0)));
+        }
+
+        function showError(message) {
+            const errorBox = document.getElementById('error-box');
+            document.getElementById('error-message').textContent = message;
+            errorBox.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
