@@ -67,6 +67,12 @@
             font-style: italic;
             color: var(--text-color);
         }
+        .api-link {
+            font-size: 12px;
+            margin-top: 5px;
+            color: var(--text-color);
+            word-break: break-all;
+        }
     </style>
 </head>
 <body>
@@ -101,6 +107,7 @@
                 <div><strong>IP Address:</strong> <span id="result-ip"></span></div>
                 <div style="margin-top: 10px;"><strong>PTR Record:</strong></div>
                 <div id="hostname-result" class="hostname-result"></div>
+                <div id="api-link" class="api-link"></div>
             </div>
             <div class="footer" style="margin-top: 15px;">
                 Made by rec :3
@@ -145,8 +152,23 @@
             }
 
             try {
-                // We'll use a proxy service since browser JavaScript can't do direct DNS lookups
-                const response = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(ipAddress.split('').reverse().join('.') + '.in-addr.arpa.')}&type=PTR`);
+                let lookupUrl;
+                if (isIPv4(ipAddress)) {
+                    // IPv4 reverse lookup format: 1.2.3.4 -> 4.3.2.1.in-addr.arpa
+                    const reversed = ipAddress.split('.').reverse().join('.');
+                    lookupUrl = `https://dns.google/resolve?name=${reversed}.in-addr.arpa.&type=PTR`;
+                } else {
+                    // IPv6 reverse lookup format: 
+                    // 2001:4860:4860::8888 -> 
+                    // 8.8.8.8.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.6.8.4.0.6.8.4.1.0.0.2.ip6.arpa.
+                    const expanded = expandIPv6(ipAddress);
+                    const reversed = expanded.split('').reverse().join('.');
+                    lookupUrl = `https://dns.google/resolve?name=${reversed}.ip6.arpa.&type=PTR`;
+                }
+
+                document.getElementById('api-link').textContent = `API: ${lookupUrl}`;
+                
+                const response = await fetch(lookupUrl);
                 
                 if (!response.ok) {
                     throw new Error(`DNS lookup failed with status ${response.status}`);
@@ -174,8 +196,7 @@
             }
         }
 
-        function isValidIP(ip) {
-            // Simple IPv4 validation
+        function isIPv4(ip) {
             const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
             if (ipv4Regex.test(ip)) {
                 const octets = ip.split('.');
@@ -185,10 +206,29 @@
                 }
                 return true;
             }
-            
-            // Simple IPv6 validation
+            return false;
+        }
+
+        function isValidIP(ip) {
+            return isIPv4(ip) || isIPv6(ip);
+        }
+
+        function isIPv6(ip) {
             const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::([0-9a-fA-F]{1,4}:){0,6}[0-9a-fA-F]{1,4}$|^[0-9a-fA-F]{1,4}::([0-9a-fA-F]{1,4}:){0,5}[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:){1,2}:([0-9a-fA-F]{1,4}:){0,4}[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:){1,3}:([0-9a-fA-F]{1,4}:){0,3}[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:){1,4}:([0-9a-fA-F]{1,4}:){0,2}[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:){1,5}:([0-9a-fA-F]{1,4}:){0,1}[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:){1,7}:$/;
             return ipv6Regex.test(ip);
+        }
+
+        function expandIPv6(ip) {
+            // Replace :: with appropriate number of zeros
+            if (ip.includes('::')) {
+                const parts = ip.split('::');
+                const left = parts[0].split(':').filter(p => p);
+                const right = parts[1].split(':').filter(p => p);
+                const missing = 8 - (left.length + right.length);
+                const zeros = Array(missing).fill('0');
+                return left.concat(zeros).concat(right).join(':');
+            }
+            return ip;
         }
 
         function showError(message) {
