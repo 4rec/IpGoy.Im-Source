@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPGoy Tools | ipgoy.im</title>
+    <link rel="stylesheet" href="https://ipgoy.im/styles.css">
+    <style>
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .tool-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .tool-card {
+            border: 1px solid var(--table-border);
+            padding: 15px;
+            background-color: var(--table-row-odd);
+            transition: transform 0.2s;
+        }
+        .tool-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .tool-name {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: var(--header-bg);
+        }
+        .tool-desc {
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        .tool-btn {
+            display: inline-block;
+            padding: 5px 15px;
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            text-decoration: none;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+        .tool-btn:hover {
+            background-color: var(--link-color);
+        }
+        .intro-text {
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="https://ipgoy.im">Home</a>
+    </div>
+
+    <div class="container">
+        <div class="site-header">
+            <div class="site-logo">ipgoy.im</div>
+            <h1>Network Tools Collection</h1>
+        </div>
+        
+        <div class="intro-text">
+            <p>Welcome to IPGoy's network tools collection. Below you'll find all available tools for IP, ASN, and network analysis. Each tool is designed to provide specific network-related information quickly and easily.</p>
+        </div>
+
+        <div class="tool-grid">
+            <!-- ASN Tools -->
+            <div class="tool-card">
+                <div class="tool-name">ASN Lookup</div>
+                <div class="tool-desc">Look up ASN information from Caida's ASRank database including rank, network cone, and peering relationships.</div>
+                <a href="https://ipgoy.im/tools/asn.html" class="tool-btn">Open Tool</a>
+            </div>
+
+            <div class="tool-card">
+                <div class="tool-name">ASN Peers</div>
+                <div class="tool-desc">Show ASN peers and neighbors from BGP data, including relationship types and counts.</div>
+                <a href="https://ipgoy.im/tools/asp.html" class="tool-btn">Open Tool</a>
+            </div>
+
+            <div class="tool-card">
+                <div class="tool-name">Random ASN</div>
+                <div class="tool-desc">Get a random ASN from a country's ASN list with organization and IP count information.</div>
+                <a href="https://ipgoy.im/tools/rasn.html" class="tool-btn">Open Tool</a>
+            </div>
+
+            <!-- IP Tools -->
+            <div class="tool-card">
+                <div class="tool-name">IP Lookup</div>
+                <div class="tool-desc">Look up IP information using nyanc4tt.xyz API including geolocation and ISP data.</div>
+                <a href="https://ipgoy.im/tools/ipl.html" class="tool-btn">Open Tool</a>
+            </div>
+
+            <div class="tool-card">
+                <div class="tool-name">Proxy Check</div>
+                <div class="tool-desc">Check if an IP is a proxy/VPN using proxycheck.io with provider and risk score information.</div>
+                <a href="https://ipgoy.im/tools/pcio.html" class="tool-btn">Open Tool</a>
+            </div>
+
+            <div class="tool-card">
+                <div class="tool-name">Reverse DNS</div>
+                <div class="tool-desc">Perform a reverse DNS lookup on an IP address (supports both IPv4 and IPv6).</div>
+                <a href="https://ipgoy.im/tools/rdns.html" class="tool-btn">Open Tool</a>
+            </div>
+
+            <div class="tool-card">
+                <div class="tool-name">Ping Tool</div>
+                <div class="tool-desc">Simple ping command to check website availability with response time and headers.</div>
+                <a href="https://ipgoy.im/tools/ping.html" class="tool-btn">Open Tool</a>
+            </div>
+
+            <!-- Geolocation Tools -->
+            <div class="tool-card">
+                <div class="tool-name">Country Lookup</div>
+                <div class="tool-desc">Get detailed country information including capital, languages, and timezones.</div>
+                <a href="https://ipgoy.im/tools/clu.html" class="tool-btn">Open Tool</a>
+            </div>
+
+            <div class="tool-card">
+                <div class="tool-name">Geo Compare</div>
+                <div class="tool-desc">Compare IP geolocation results from multiple APIs to check for consistency.</div>
+                <a href="https://ipgoy.im/tools/gco.html" class="tool-btn">Open Tool</a>
+            </div>
+
+            <!-- Random IP Tools -->
+            <div class="tool-card">
+                <div class="tool-name">Random CIDR IP</div>
+                <div class="tool-desc">Get a random IP address from a CIDR range (supports both IPv4 and IPv6).</div>
+                <a href="https://ipgoy.im/tools/rcr.html" class="tool-btn">Open Tool</a>
+            </div>
+
+            <div class="tool-card">
+                <div class="tool-name">Random ASN IP</div>
+                <div class="tool-desc">Get a random IP address from an ASN's IP ranges with network information.</div>
+                <a href="https://ipgoy.im/tools/riba.html" class="tool-btn">Open Tool</a>
+            </div>
+
+            <div class="tool-card">
+                <div class="tool-name">Random Country IP</div>
+                <div class="tool-desc">Get a random IP address from a country's CIDR ranges (IPv4 only).</div>
+                <a href="https://ipgoy.im/tools/rip.html" class="tool-btn">Open Tool</a>
+            </div>
+        </div>
+
+        <div class="footer">
+            <a href="https://ipgoy.im">ipgoy.im</a> | Made by rec :3
+        </div>
+    </div>
+</body>
+</html>
