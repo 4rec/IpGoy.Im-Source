@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP Checker</title>
+    <style>
+        :root {
+            --bg-color: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            --text-color: #333;
+            --card-bg: white;
+            --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --table-header-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --table-header-color: white;
+            --table-border: #eee;
+            --table-text: #555;
+            --censored-bg: #f0f0f0;
+            --settings-bg: rgba(255, 255, 255, 0.95);
+            --settings-text: #333;
+        }
+        
+        .dark-mode {
+            --bg-color: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            --text-color: #f0f0f0;
+            --card-bg: #1e293b;
+            --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            --table-header-bg: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
+            --table-header-color: #f8fafc;
+            --table-border: #334155;
+            --table-text: #e2e8f0;
+            --censored-bg: #334155;
+            --settings-bg: rgba(30, 41, 59, 0.95);
+            --settings-text: #f0f0f0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            transition: background 0.5s ease, color 0.3s ease;
+        }
+        
+        .container {
+            max-width: 500px;
+            width: 100%;
+            animation: fadeIn 0.8s ease-out;
+            position: relative;
+        }
+        
+        .location-text {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            opacity: 0;
+            animation: slideUp 0.6s ease-out 0.3s forwards;
+        }
+        
+        .ip-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: var(--card-bg);
+            box-shadow: var(--card-shadow);
+            border-radius: 12px;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s ease-out 0.5s forwards;
+            transition: background 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .ip-table th {
+            background: var(--table-header-bg);
+            color: var(--table-header-color);
+            padding: 15px;
+            text-align: left;
+            font-weight: 500;
+        }
+        
+        .ip-table td {
+            padding: 15px;
+            border-bottom: 1px solid var(--table-border);
+            color: var(--table-text);
+            transition: border-color 0.3s ease, color 0.3s ease;
+        }
+        
+        .ip-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .flag-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .flag {
+            width: 30px;
+            height: 22px;
+            border-radius: 3px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .dark-mode-toggle, .settings-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: var(--card-bg);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+        
+        .dark-mode-toggle {
+            right: 70px;
+        }
+        
+        .dark-mode-toggle:hover, .settings-toggle:hover {
+            transform: scale(1.1);
+        }
+        
+        .dark-mode-toggle svg, .settings-toggle svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--text-color);
+        }
+        
+        .ip-address {
+            cursor: pointer;
+            position: relative;
+            user-select: none;
+        }
+        
+        .ip-address.censored {
+            background: var(--censored-bg);
+            color: transparent;
+            text-shadow: 0 0 8px rgba(0,0,0,0.5);
+            border-radius: 4px;
+        }
+        
+        .ip-address.censored::after {
+            content: "Click to reveal";
+            position: absolute;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: var(--text-color);
+            text-shadow: none;
+        }
+        
+        .settings-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--settings-bg);
+            color: var(--settings-text);
+            padding: 20px;
+            z-index: 100;
+            transform: translateY(-100%);
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+        }
+        
+        .settings-panel.open {
+            transform: translateY(0);
+        }
+        
+        .settings-panel h2 {
+            margin-top: 0;
+            text-align: center;
+        }
+        
+        .settings-group {
+            margin-bottom: 20px;
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+        }
+        
+        .settings-group h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--table-border);
+        }
+        
+        .setting-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #667eea;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .close-settings {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--settings-text);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes fadeInUp {
+            from { 
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes slideUp {
+            from { 
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .ip-address.censored::after {
+                content: "Tap to reveal";
+            }
+            
+            .dark-mode-toggle {
+                right: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="dark-mode-toggle" id="darkModeToggle" aria-label="Toggle dark mode">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1-8.313-12.454z"/>
+        </svg>
+    </button>
+    
+    <button class="settings-toggle" id="settingsToggle" aria-label="Settings">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66z"/>
+        </svg>
+    </button>
+    
+    <div class="container">
+        <div class="location-text" id="locationText"></div>
+        <table class="ip-table" id="ipTable">
+            <thead>
+                <tr>
+                    <th colspan="2">Connection Information</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr data-field="ip">
+                    <td>IP Address</td>
+                    <td id="ipAddress" class="ip-address censored"></td>
+                </tr>
+                <tr data-field="country">
+                    <td>Country</td>
+                    <td class="flag-container">
+                        <img id="countryFlag" class="flag" src="https://surfshark.com/website/_next/public/global/flags/GB.svg" alt="Flag">
+                        <span id="countryName"></span>
+                    </td>
+                </tr>
+                <tr data-field="flag">
+                    <td>Flag</td>
+                    <td id="flagEmoji"></td>
+                </tr>
+                <tr data-field="city">
+                    <td>City</td>
+                    <td id="city"></td>
+                </tr>
+                <tr data-field="region">
+                    <td>Region</td>
+                    <td id="region"></td>
+                </tr>
+                <tr data-field="isp">
+                    <td>ISP</td>
+                    <td id="isp"></td>
+                </tr>
+                <tr data-field="asn">
+                    <td>ASN</td>
+                    <td id="asn"></td>
+                </tr>
+                <tr data-field="continent">
+                    <td>Continent</td>
+                    <td id="continent"></td>
+                </tr>
+                <tr data-field="country_code">
+                    <td>Country Code</td>
+                    <td id="countryCode"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="settings-panel" id="settingsPanel">
+        <button class="close-settings" id="closeSettings">&times;</button>
+        <h2>Settings</h2>
+        
+        <div class="settings-group">
+            <h3>Privacy Settings</h3>
+            <div class="setting-item">
+                <label for="publicMode">Public Mode (show IP by default)</label>
+                <label class="switch">
+                    <input type="checkbox" id="publicMode">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+        
+        <div class="settings-group">
+            <h3>Display Options</h3>
+            <div class="setting-item">
+                <label for="showIP">Show IP Address</label>
+                <label class="switch">
+                    <input type="checkbox" id="showIP" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="setting-item">
+                <label for="showCountry">Show Country</label>
+                <label class="switch">
+                    <input type="checkbox" id="showCountry" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="setting-item">
+                <label for="showFlag">Show Flag</label>
+                <label class="switch">
+                    <input type="checkbox" id="showFlag" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="setting-item">
+                <label for="showCity">Show City</label>
+                <label class="switch">
+                    <input type="checkbox" id="showCity" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="setting-item">
+                <label for="showRegion">Show Region</label>
+                <label class="switch">
+                    <input type="checkbox" id="showRegion" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="setting-item">
+                <label for="showISP">Show ISP</label>
+                <label class="switch">
+                    <input type="checkbox" id="showISP" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="setting-item">
+                <label for="showASN">Show ASN</label>
+                <label class="switch">
+                    <input type="checkbox" id="showASN">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="setting-item">
+                <label for="showContinent">Show Continent</label>
+                <label class="switch">
+                    <input type="checkbox" id="showContinent">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="setting-item">
+                <label for="showCountryCode">Show Country Code</label>
+                <label class="switch">
+                    <input type="checkbox" id="showCountryCode">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load settings from cookies
+            function getCookie(name) {
+                const value = `; ${document.cookie}`;
+                const parts = value.split(`; ${name}=`);
+                if (parts.length === 2) return parts.pop().split(';').shift();
+            }
+            
+            function setCookie(name, value, days = 365) {
+                const date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                document.cookie = `${name}=${value}; expires=${date.toUTCString()}; path=/`;
+            }
+            
+            // Initialize settings
+            const settings = {
+                darkMode: getCookie('darkMode') === 'true',
+                publicMode: getCookie('publicMode') === 'true',
+                showIP: getCookie('showIP') !== 'false',
+                showCountry: getCookie('showCountry') !== 'false',
+                showFlag: getCookie('showFlag') !== 'false',
+                showCity: getCookie('showCity') !== 'false',
+                showRegion: getCookie('showRegion') !== 'false',
+                showISP: getCookie('showISP') !== 'false',
+                showASN: getCookie('showASN') === 'true',
+                showContinent: getCookie('showContinent') === 'true',
+                showCountryCode: getCookie('showCountryCode') === 'true'
+            };
+            
+            // Apply settings
+            if (settings.darkMode) {
+                document.body.classList.add('dark-mode');
+            }
+            
+            document.getElementById('publicMode').checked = settings.publicMode;
+            document.getElementById('showIP').checked = settings.showIP;
+            document.getElementById('showCountry').checked = settings.showCountry;
+            document.getElementById('showFlag').checked = settings.showFlag;
+            document.getElementById('showCity').checked = settings.showCity;
+            document.getElementById('showRegion').checked = settings.showRegion;
+            document.getElementById('showISP').checked = settings.showISP;
+            document.getElementById('showASN').checked = settings.showASN;
+            document.getElementById('showContinent').checked = settings.showContinent;
+            document.getElementById('showCountryCode').checked = settings.showCountryCode;
+            
+            // Toggle dark mode
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            darkModeToggle.addEventListener('click', function() {
+                settings.darkMode = !settings.darkMode;
+                document.body.classList.toggle('dark-mode', settings.darkMode);
+                setCookie('darkMode', settings.darkMode);
+            });
+            
+            // Settings panel toggle
+            const settingsPanel = document.getElementById('settingsPanel');
+            const settingsToggle = document.getElementById('settingsToggle');
+            const closeSettings = document.getElementById('closeSettings');
+            
+            settingsToggle.addEventListener('click', function() {
+                settingsPanel.classList.add('open');
+            });
+            
+            closeSettings.addEventListener('click', function() {
+                settingsPanel.classList.remove('open');
+            });
+            
+            // Save settings
+            function updateSetting(settingName) {
+                settings[settingName] = document.getElementById(settingName).checked;
+                setCookie(settingName, settings[settingName]);
+                toggleField(settingName.replace('show', '').toLowerCase(), settings[settingName]);
+                
+                if (settingName === 'publicMode') {
+                    updateIPCensorship();
+                }
+            }
+            
+            document.getElementById('publicMode').addEventListener('change', () => updateSetting('publicMode'));
+            document.getElementById('showIP').addEventListener('change', () => updateSetting('showIP'));
+            document.getElementById('showCountry').addEventListener('change', () => updateSetting('showCountry'));
+            document.getElementById('showFlag').addEventListener('change', () => updateSetting('showFlag'));
+            document.getElementById('showCity').addEventListener('change', () => updateSetting('showCity'));
+            document.getElementById('showRegion').addEventListener('change', () => updateSetting('showRegion'));
+            document.getElementById('showISP').addEventListener('change', () => updateSetting('showISP'));
+            document.getElementById('showASN').addEventListener('change', () => updateSetting('showASN'));
+            document.getElementById('showContinent').addEventListener('change', () => updateSetting('showContinent'));
+            document.getElementById('showCountryCode').addEventListener('change', () => updateSetting('showCountryCode'));
+            
+            function toggleField(field, show) {
+                const rows = document.querySelectorAll(`tr[data-field="${field}"]`);
+                rows.forEach(row => {
+                    row.style.display = show ? '' : 'none';
+                });
+            }
+            
+            // Initialize fields
+            toggleField('ip', settings.showIP);
+            toggleField('country', settings.showCountry);
+            toggleField('flag', settings.showFlag);
+            toggleField('city', settings.showCity);
+            toggleField('region', settings.showRegion);
+            toggleField('isp', settings.showISP);
+            toggleField('asn', settings.showASN);
+            toggleField('continent', settings.showContinent);
+            toggleField('country_code', settings.showCountryCode);
+            
+            // IP address censorship
+            const ipAddressElement = document.getElementById('ipAddress');
+            let censorIP = !settings.publicMode;
+            
+            function updateIPCensorship() {
+                censorIP = !settings.publicMode;
+                ipAddressElement.classList.toggle('censored', censorIP);
+            }
+            
+            updateIPCensorship();
+            
+            // Toggle censorship on click (mobile)
+            ipAddressElement.addEventListener('click', function() {
+                if (window.innerWidth <= 480) { // Mobile devices
+                    toggleCensorship();
+                }
+            });
+            
+            // Toggle censorship on Ctrl key (desktop)
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey) {
+                    toggleCensorship();
+                }
+            });
+            
+            function toggleCensorship() {
+                censorIP = !censorIP;
+                ipAddressElement.classList.toggle('censored', censorIP);
+            }
+            
+            // Parse CSV data
+            function parseCSV(csvText) {
+                const lines = csvText.split('\n');
+                const headers = lines[0].split(',');
+                const result = [];
+                
+                for (let i = 1; i < lines.length; i++) {
+                    if (!lines[i]) continue;
+                    
+                    const obj = {};
+                    const currentline = lines[i].split(',');
+                    
+                    for (let j = 0; j < headers.length; j++) {
+                        obj[headers[j].trim()] = currentline[j] ? currentline[j].trim() : '';
+                    }
+                    
+                    result.push(obj);
+                }
+                
+                return result;
+            }
+            
+            // Fetch IP data
+            fetch('https://nanoxyte.xyz/api/iplookup?ip=')
+                .then(response => response.json())
+                .then(ipData => {
+                    // Update IP address
+                    ipAddressElement.textContent = ipData.ip;
+                    
+                    // Update the table data
+                    const countryCode = ipData.country_code.toUpperCase();
+                    document.getElementById('countryFlag').src = 
+                        `https://surfshark.com/website/_next/public/global/flags/${countryCode}.svg`;
+                    document.getElementById('countryName').textContent = ipData.country;
+                    document.getElementById('flagEmoji').textContent = ipData.flag_emoji;
+                    document.getElementById('city').textContent = ipData.city;
+                    document.getElementById('region').textContent = ipData.region;
+                    document.getElementById('isp').textContent = ipData.isp;
+                    document.getElementById('asn').textContent = ipData.asn;
+                    document.getElementById('continent').textContent = ipData.continent;
+                    document.getElementById('countryCode').textContent = ipData.country_code;
+                    
+                    // Fetch CSV greetings data
+                    return fetch('https://ipgoy.im/resources/greetings.csv')
+                        .then(response => response.text())
+                        .then(csvText => {
+                            const greetingsData = parseCSV(csvText);
+                            
+                            // Find all greetings for the country flag
+                            const countryGreetings = greetingsData.filter(
+                                item => item.flag === ipData.flag_emoji
+                            );
+                            
+                            // Select greeting
+                            let greeting = "Hello";
+                            let wavingEmoji = "👋";
+                            
+                            if (countryGreetings.length > 0) {
+                                // Pick random greeting if multiple exist
+                                const randomGreeting = countryGreetings[
+                                    Math.floor(Math.random() * countryGreetings.length)
+                                ];
+                                greeting = randomGreeting.greeting;
+                            }
+                            
+                            // Update location text with greeting and emojis
+                            const locationText = document.getElementById('locationText');
+                            locationText.innerHTML = `
+                                ${greeting} ${wavingEmoji}, 
+                                We see you are in ${ipData.city}, ${ipData.country} ${ipData.flag_emoji}
+                            `;
+                        });
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                    document.getElementById('locationText').textContent = 
+                        'Hello 👋, We see you are from an unknown location';
+                    
+                    // Set default values if there's an error
+                    ipAddressElement.textContent = 'Unknown';
+                    document.getElementById('countryName').textContent = 'Unknown';
+                    document.getElementById('flagEmoji').textContent = 'Unknown';
+                    document.getElementById('city').textContent = 'Unknown';
+                    document.getElementById('region').textContent = 'Unknown';
+                    document.getElementById('isp').textContent = 'Unknown';
+                    document.getElementById('asn').textContent = 'Unknown';
+                    document.getElementById('continent').textContent = 'Unknown';
+                    document.getElementById('countryCode').textContent = 'Unknown';
+                });
+        });
+    </script>
+</body>
+</html>
