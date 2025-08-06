@@ -1,116 +1,288 @@
-async function lookupASNPeers() {
-    const asnNumber = document.getElementById('asn-number').value.trim();
-    const errorBox = document.getElementById('error-box');
-    const resultBox = document.getElementById('result-box');
-    const loading = document.getElementById('loading');
-    
-    // Hide boxes and show loading
-    errorBox.style.display = 'none';
-    resultBox.style.display = 'none';
-    loading.style.display = 'block';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASN Peers Lookup | ipgoy.im</title>
+    <link rel="stylesheet" href="https://ipgoy.im/styles.css">
+    <style>
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .result-box {
+            margin-top: 20px;
+            display: none;
+        }
+        .error-box {
+            margin-top: 20px;
+            display: none;
+            background-color: var(--active-link);
+            color: white;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .site-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .site-logo {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--header-bg);
+            margin-bottom: 10px;
+        }
+        .loading {
+            display: none;
+            margin: 10px 0;
+            font-style: italic;
+        }
+        .peer-group {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: var(--table-row-even);
+            border: 1px solid var(--table-border);
+        }
+        .peer-group-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .peer-item {
+            margin-bottom: 5px;
+            padding-left: 10px;
+            border-left: 3px solid var(--header-bg);
+        }
+        .asn-info {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: var(--table-row-odd);
+            border: 1px solid var(--table-border);
+        }
+        .relationship-badge {
+            display: inline-block;
+            padding: 2px 5px;
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            border-radius: 3px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+        .peer-count {
+            font-weight: bold;
+            color: var(--header-bg);
+        }
+        .country-badge {
+            display: inline-block;
+            padding: 2px 5px;
+            background-color: var(--table-row-odd);
+            border: 1px solid var(--table-border);
+            border-radius: 3px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="https://ipgoy.im">Home</a>
+    </div>
 
-    if (!asnNumber) {
-        showError("Please provide an ASN number. Example: 3356");
-        loading.style.display = 'none';
-        return;
-    }
-
-    // Validate ASN number
-    if (!/^\d+$/.test(asnNumber)) {
-        showError("Invalid ASN number. Please provide a numeric ASN like 3356");
-        loading.style.display = 'none';
-        return;
-    }
-
-    try {
-        const url = `https://corsproxy.io/?url=https://api.bgpview.io/asn/${asnNumber}/peers`;
-        const response = await fetch(url);
+    <div class="container">
+        <div class="site-header">
+            <div class="site-logo">ipgoy.im</div>
+            <h1>ASN Peers Lookup</h1>
+        </div>
         
-        if (!response.ok) {
-            if (response.status === 404) {
-                throw new Error(`ASN ${asnNumber} not found`);
-            } else {
-                throw new Error(`API returned status ${response.status}`);
+        <div class="box">
+            <div class="box-title">Search ASN</div>
+            <div class="form-group">
+                <label for="asn-number">ASN Number (e.g., 3356):</label>
+                <input type="text" id="asn-number" placeholder="Enter ASN number...">
+            </div>
+            <button id="lookup-btn">Lookup Peers</button>
+            <div id="loading" class="loading">Fetching ASN peers...</div>
+        </div>
+
+        <div id="error-box" class="box error-box">
+            <div class="box-title">Error</div>
+            <div id="error-message"></div>
+        </div>
+
+        <div id="result-box" class="box result-box">
+            <div class="box-title" id="result-title">ASN Peers</div>
+            <div id="asn-info" class="asn-info" style="display: none;">
+                <strong>ASN Name:</strong> <span id="asn-name"></span>
+                <div><strong>Total Peers:</strong> <span id="peer-count" class="peer-count"></span></div>
+                <div><strong>Relationship Types:</strong> <span id="relationship-types"></span></div>
+            </div>
+            <div id="peer-groups"></div>
+            <div class="footer" style="margin-top: 15px;">
+                Data from bgpview.io | Made by rec :3
+            </div>
+        </div>
+
+        <div class="footer">
+            <a href="https://ipgoy.im">ipgoy.im</a> | Made by rec :3
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('lookup-btn').addEventListener('click', lookupASNPeers);
+        document.getElementById('asn-number').addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                lookupASNPeers();
+            }
+        });
+
+        async function lookupASNPeers() {
+            const asnNumber = document.getElementById('asn-number').value.trim();
+            const errorBox = document.getElementById('error-box');
+            const resultBox = document.getElementById('result-box');
+            const loading = document.getElementById('loading');
+            
+            // Hide boxes and show loading
+            errorBox.style.display = 'none';
+            resultBox.style.display = 'none';
+            loading.style.display = 'block';
+
+            if (!asnNumber) {
+                showError("Please provide an ASN number. Example: 3356");
+                loading.style.display = 'none';
+                return;
+            }
+
+            // Validate ASN number
+            if (!/^\d+$/.test(asnNumber)) {
+                showError("Invalid ASN number. Please provide a numeric ASN like 3356");
+                loading.style.display = 'none';
+                return;
+            }
+
+            try {
+                const url = `https://corsproxy.io/?url=https://api.bgpview.io/asn/${asnNumber}/peers`;
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        throw new Error(`ASN ${asnNumber} not found`);
+                    } else {
+                        throw new Error(`API returned status ${response.status}`);
+                    }
+                }
+
+                const data = await response.json();
+                let peers = data.data?.ipv4_peers || [];
+                peers = peers.concat(data.data?.ipv6_peers || []);
+                
+                if (peers.length === 0) {
+                    showError("No peers found for this ASN");
+                    loading.style.display = 'none';
+                    return;
+                }
+                
+                // Sort by ASN number
+                peers.sort((a, b) => (a.asn || 0) - (b.asn || 0));
+                
+                // Display results
+                document.getElementById('result-title').textContent = `AS${asnNumber} Peers`;
+                
+                // Set ASN info
+                const asnInfo = document.getElementById('asn-info');
+                document.getElementById('asn-name').textContent = 
+                    peers[0].name || 'Unknown';
+                document.getElementById('peer-count').textContent = peers.length;
+                
+                // Calculate relationship counts
+                const relationships = {};
+                for (const peer of peers) {
+                    const rel = peer.relationship || 'Unknown';
+                    relationships[rel] = (relationships[rel] || 0) + 1;
+                }
+                
+                if (Object.keys(relationships).length > 0) {
+                    const relBadges = Object.entries(relationships)
+                        .map(([rel, count]) => 
+                            `<span class="relationship-badge">${rel}: ${count}</span>`)
+                        .join(' ');
+                    document.getElementById('relationship-types').innerHTML = relBadges;
+                }
+                
+                asnInfo.style.display = 'block';
+                
+                // Display peers in groups
+                const peerGroupsContainer = document.getElementById('peer-groups');
+                peerGroupsContainer.innerHTML = '';
+                
+                const peerGroups = chunkArray(peers, 10);
+                
+                peerGroups.forEach((group, i) => {
+                    const groupDiv = document.createElement('div');
+                    groupDiv.className = 'peer-group';
+                    
+                    const title = document.createElement('div');
+                    title.className = 'peer-group-title';
+                    title.textContent = `Peers Group ${i + 1}`;
+                    groupDiv.appendChild(title);
+                    
+                    group.forEach(peer => {
+                        const peerDiv = document.createElement('div');
+                        peerDiv.className = 'peer-item';
+                        
+                        const peerAsn = peer.asn || 'N/A';
+                        const peerName = peer.name || 'Unknown';
+                        const peerDesc = peer.description ? `- ${peer.description}` : '';
+                        const countryCode = peer.country_code ? 
+                            `<span class="country-badge">${peer.country_code}</span>` : '';
+                        const relationship = peer.relationship ? 
+                            `<span class="relationship-badge">${peer.relationship}</span>` : '';
+                        
+                        peerDiv.innerHTML = 
+                            `<strong>AS${peerAsn}</strong> ${countryCode} - ${peerName} ${peerDesc} ${relationship}`;
+                        groupDiv.appendChild(peerDiv);
+                    });
+                    
+                    peerGroupsContainer.appendChild(groupDiv);
+                });
+                
+                resultBox.style.display = 'block';
+            } catch (error) {
+                showError(`Failed to fetch ASN peers: ${error.message}`);
+            } finally {
+                loading.style.display = 'none';
             }
         }
 
-        const data = await response.json();
-        let peers = data.data?.ipv4_peers || [];
-        peers = peers.concat(data.data?.ipv6_peers || []);
-        
-        if (peers.length === 0) {
-            showError("No peers found for this ASN");
-            loading.style.display = 'none';
-            return;
+        function chunkArray(arr, size) {
+            const chunks = [];
+            for (let i = 0; i < arr.length; i += size) {
+                chunks.push(arr.slice(i, i + size));
+            }
+            return chunks;
         }
-        
-        // Sort by ASN number
-        peers.sort((a, b) => (a.asn || 0) - (b.asn || 0));
-        
-        // Display results
-        document.getElementById('result-title').textContent = `AS${asnNumber} Peers`;
-        
-        // Set ASN info
-        const asnInfo = document.getElementById('asn-info');
-        document.getElementById('asn-name').textContent = 
-            peers[0].name || 'Unknown';
-        document.getElementById('peer-count').textContent = peers.length;
-        
-        // Calculate relationship counts
-        const relationships = {};
-        for (const peer of peers) {
-            const rel = peer.relationship || 'Unknown';
-            relationships[rel] = (relationships[rel] || 0) + 1;
+
+        function showError(message) {
+            const errorBox = document.getElementById('error-box');
+            document.getElementById('error-message').textContent = message;
+            errorBox.style.display = 'block';
         }
-        
-        if (Object.keys(relationships).length > 0) {
-            const relBadges = Object.entries(relationships)
-                .map(([rel, count]) => 
-                    `<span class="relationship-badge">${rel}: ${count}</span>`)
-                .join(' ');
-            document.getElementById('relationship-types').innerHTML = relBadges;
-        }
-        
-        asnInfo.style.display = 'block';
-        
-        // Display peers in groups
-        const peerGroupsContainer = document.getElementById('peer-groups');
-        peerGroupsContainer.innerHTML = '';
-        
-        const peerGroups = chunkArray(peers, 10);
-        
-        peerGroups.forEach((group, i) => {
-            const groupDiv = document.createElement('div');
-            groupDiv.className = 'peer-group';
-            
-            const title = document.createElement('div');
-            title.className = 'peer-group-title';
-            title.textContent = `Peers Group ${i + 1}`;
-            groupDiv.appendChild(title);
-            
-            group.forEach(peer => {
-                const peerDiv = document.createElement('div');
-                peerDiv.className = 'peer-item';
-                
-                const peerAsn = peer.asn || 'N/A';
-                const peerName = peer.name || 'Unknown';
-                const peerDesc = peer.description || '';
-                const countryCode = peer.country_code ? ` (${peer.country_code})` : '';
-                const relationship = peer.relationship ? 
-                    `<span class="relationship-badge">${peer.relationship}</span>` : '';
-                
-                peerDiv.innerHTML = 
-                    `<strong>AS${peerAsn}</strong> - ${peerName}${countryCode} ${peerDesc} ${relationship}`;
-                groupDiv.appendChild(peerDiv);
-            });
-            
-            peerGroupsContainer.appendChild(groupDiv);
-        });
-        
-        resultBox.style.display = 'block';
-    } catch (error) {
-        showError(`Failed to fetch ASN peers: ${error.message}`);
-    } finally {
-        loading.style.display = 'none';
-    }
-}
+    </script>
+</body>
+</html>
