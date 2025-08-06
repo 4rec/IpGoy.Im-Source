@@ -60,6 +60,10 @@
             padding: 10px;
             background-color: var(--table-row-even);
             border: 1px solid var(--table-border);
+            display: none;
+        }
+        .peer-group.active {
+            display: block;
         }
         .peer-group-title {
             font-weight: bold;
@@ -98,6 +102,37 @@
             font-size: 12px;
             margin-left: 5px;
         }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .page-btn {
+            padding: 5px 10px;
+            margin: 0 5px;
+            cursor: pointer;
+            background-color: var(--table-row-odd);
+            border: 1px solid var(--table-border);
+            border-radius: 3px;
+        }
+        .page-btn.active {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+        }
+        .page-input {
+            width: 50px;
+            text-align: center;
+            margin: 0 5px;
+        }
+        .page-jump {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .page-jump button {
+            margin-left: 5px;
+        }
     </style>
 </head>
 <body>
@@ -134,6 +169,9 @@
                 <div><strong>Relationship Types:</strong> <span id="relationship-types"></span></div>
             </div>
             <div id="peer-groups"></div>
+            <div id="pagination" class="pagination" style="display: none;">
+                <!-- Pagination buttons will be added here -->
+            </div>
             <div class="footer" style="margin-top: 15px;">
                 Data from bgpview.io | Made by rec :3
             </div>
@@ -151,6 +189,10 @@
                 lookupASNPeers();
             }
         });
+
+        let currentPage = 1;
+        let totalPages = 1;
+        const peersPerPage = 10;
 
         async function lookupASNPeers() {
             const asnNumber = document.getElementById('asn-number').value.trim();
@@ -227,22 +269,28 @@
                 
                 asnInfo.style.display = 'block';
                 
-                // Display peers in groups
+                // Display peers with pagination
                 const peerGroupsContainer = document.getElementById('peer-groups');
                 peerGroupsContainer.innerHTML = '';
                 
-                const peerGroups = chunkArray(peers, 10);
+                // Create peer groups
+                totalPages = Math.ceil(peers.length / peersPerPage);
                 
-                peerGroups.forEach((group, i) => {
+                for (let i = 0; i < totalPages; i++) {
                     const groupDiv = document.createElement('div');
                     groupDiv.className = 'peer-group';
+                    groupDiv.id = `peer-group-${i+1}`;
                     
                     const title = document.createElement('div');
                     title.className = 'peer-group-title';
-                    title.textContent = `Peers Group ${i + 1}`;
+                    title.textContent = `Peers ${(i * peersPerPage) + 1}-${Math.min((i + 1) * peersPerPage, peers.length)} of ${peers.length}`;
                     groupDiv.appendChild(title);
                     
-                    group.forEach(peer => {
+                    const startIdx = i * peersPerPage;
+                    const endIdx = startIdx + peersPerPage;
+                    const groupPeers = peers.slice(startIdx, endIdx);
+                    
+                    groupPeers.forEach(peer => {
                         const peerDiv = document.createElement('div');
                         peerDiv.className = 'peer-item';
                         
@@ -260,7 +308,14 @@
                     });
                     
                     peerGroupsContainer.appendChild(groupDiv);
-                });
+                }
+                
+                // Setup pagination
+                setupPagination();
+                
+                // Show first page
+                currentPage = 1;
+                showPage(currentPage);
                 
                 resultBox.style.display = 'block';
             } catch (error) {
@@ -270,12 +325,129 @@
             }
         }
 
-        function chunkArray(arr, size) {
-            const chunks = [];
-            for (let i = 0; i < arr.length; i += size) {
-                chunks.push(arr.slice(i, i + size));
+        function setupPagination() {
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+            pagination.style.display = 'flex';
+            
+            // Previous button
+            const prevBtn = document.createElement('div');
+            prevBtn.className = 'page-btn';
+            prevBtn.textContent = '←';
+            prevBtn.addEventListener('click', () => {
+                if (currentPage > 1) {
+                    showPage(currentPage - 1);
+                }
+            });
+            pagination.appendChild(prevBtn);
+            
+            // Page buttons
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+            
+            if (endPage - startPage + 1 < maxVisiblePages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
             }
-            return chunks;
+            
+            if (startPage > 1) {
+                const firstBtn = document.createElement('div');
+                firstBtn.className = 'page-btn';
+                firstBtn.textContent = '1';
+                firstBtn.addEventListener('click', () => showPage(1));
+                pagination.appendChild(firstBtn);
+                
+                if (startPage > 2) {
+                    const ellipsis = document.createElement('div');
+                    ellipsis.textContent = '...';
+                    pagination.appendChild(ellipsis);
+                }
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const pageBtn = document.createElement('div');
+                pageBtn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
+                pageBtn.textContent = i;
+                pageBtn.addEventListener('click', () => showPage(i));
+                pagination.appendChild(pageBtn);
+            }
+            
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    const ellipsis = document.createElement('div');
+                    ellipsis.textContent = '...';
+                    pagination.appendChild(ellipsis);
+                }
+                
+                const lastBtn = document.createElement('div');
+                lastBtn.className = 'page-btn';
+                lastBtn.textContent = totalPages;
+                lastBtn.addEventListener('click', () => showPage(totalPages));
+                pagination.appendChild(lastBtn);
+            }
+            
+            // Next button
+            const nextBtn = document.createElement('div');
+            nextBtn.className = 'page-btn';
+            nextBtn.textContent = '→';
+            nextBtn.addEventListener('click', () => {
+                if (currentPage < totalPages) {
+                    showPage(currentPage + 1);
+                }
+            });
+            pagination.appendChild(nextBtn);
+            
+            // Page jump controls
+            const pageJump = document.createElement('div');
+            pageJump.className = 'page-jump';
+            pageJump.innerHTML = `
+                <span>Go to page:</span>
+                <input type="number" id="page-input" class="page-input" min="1" max="${totalPages}">
+                <button id="go-btn">Go</button>
+            `;
+            pagination.appendChild(pageJump);
+            
+            document.getElementById('go-btn').addEventListener('click', () => {
+                const pageNum = parseInt(document.getElementById('page-input').value);
+                if (pageNum >= 1 && pageNum <= totalPages) {
+                    showPage(pageNum);
+                }
+            });
+            
+            document.getElementById('page-input').addEventListener('keyup', (e) => {
+                if (e.key === 'Enter') {
+                    const pageNum = parseInt(document.getElementById('page-input').value);
+                    if (pageNum >= 1 && pageNum <= totalPages) {
+                        showPage(pageNum);
+                    }
+                }
+            });
+        }
+
+        function showPage(pageNum) {
+            // Hide current page
+            const currentGroup = document.getElementById(`peer-group-${currentPage}`);
+            if (currentGroup) currentGroup.classList.remove('active');
+            
+            // Show new page
+            currentPage = pageNum;
+            const newGroup = document.getElementById(`peer-group-${currentPage}`);
+            if (newGroup) newGroup.classList.add('active');
+            
+            // Update pagination buttons
+            const pageBtns = document.querySelectorAll('.page-btn');
+            pageBtns.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent === String(currentPage)) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // Update page input
+            document.getElementById('page-input').value = currentPage;
+            
+            // Scroll to top of results
+            document.getElementById('peer-groups').scrollIntoView({ behavior: 'smooth' });
         }
 
         function showError(message) {
