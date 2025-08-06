@@ -78,6 +78,13 @@
             text-align: center;
             margin-top: 10px;
         }
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+        .button-group button {
+            flex: 1;
+        }
     </style>
 </head>
 <body>
@@ -97,7 +104,10 @@
                 <label for="ip-address">IP Address (IPv4 or IPv6):</label>
                 <input type="text" id="ip-address" placeholder="Enter IP address...">
             </div>
-            <button id="lookup-btn">Lookup IP</button>
+            <div class="button-group">
+                <button id="lookup-btn">Lookup IP</button>
+                <button id="self-lookup-btn">Lookup My IP</button>
+            </div>
             <div id="loading" class="loading">Fetching IP information...</div>
         </div>
 
@@ -174,6 +184,7 @@
 
     <script>
         document.getElementById('lookup-btn').addEventListener('click', lookupIP);
+        document.getElementById('self-lookup-btn').addEventListener('click', lookupSelfIP);
         document.getElementById('ip-address').addEventListener('keyup', function(e) {
             if (e.key === 'Enter') {
                 lookupIP();
@@ -206,47 +217,81 @@
                 }
 
                 const data = await response.json();
-                
-                // Display results
-                document.getElementById('ip-title').textContent = `IP: ${data.ip}`;
-                
-                // Set flag image
-                const flagImg = document.getElementById('ip-flag');
-                if (data.flag_image) {
-                    flagImg.src = data.flag_image;
-                    flagImg.style.display = 'block';
-                } else {
-                    flagImg.style.display = 'none';
-                }
-                
-                // Location info
-                document.getElementById('continent').textContent = data.continent || 'N/A';
-                document.getElementById('country').textContent = 
-                    `${data.flag_emoji || ''} ${data.country || 'N/A'} (${data.country_code || 'N/A'})`;
-                document.getElementById('region').textContent = data.region || 'N/A';
-                document.getElementById('city').textContent = data.city || 'N/A';
-                document.getElementById('postal').textContent = data.postal || 'N/A';
-                document.getElementById('coordinates').textContent = 
-                    `${data.latitude || 'N/A'}, ${data.longitude || 'N/A'}`;
-                
-                // Network info
-                document.getElementById('asn').textContent = data.asn ? `AS${data.asn}` : 'N/A';
-                document.getElementById('isp').textContent = data.isp || 'N/A';
-                
-                // Map link
-                if (data.latitude && data.longitude) {
-                    const mapLink = document.getElementById('google-maps');
-                    mapLink.href = `https://www.google.com/maps?q=${data.latitude},${data.longitude}`;
-                    document.getElementById('map-link').style.display = 'block';
-                } else {
-                    document.getElementById('map-link').style.display = 'none';
-                }
+                displayResults(data);
                 
                 resultBox.style.display = 'block';
             } catch (error) {
                 showError(`Failed to fetch IP data: ${error.message}`);
             } finally {
                 loading.style.display = 'none';
+            }
+        }
+
+        async function lookupSelfIP() {
+            const errorBox = document.getElementById('error-box');
+            const resultBox = document.getElementById('result-box');
+            const loading = document.getElementById('loading');
+            
+            // Hide boxes and show loading
+            errorBox.style.display = 'none';
+            resultBox.style.display = 'none';
+            loading.style.display = 'block';
+
+            try {
+                const url = `https://nyanc4tt.xyz/api/iplookup?ip=`;
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`API returned status ${response.status}`);
+                }
+
+                const data = await response.json();
+                displayResults(data);
+                
+                // Update the input field with the detected IP
+                document.getElementById('ip-address').value = data.ip;
+                
+                resultBox.style.display = 'block';
+            } catch (error) {
+                showError(`Failed to fetch your IP data: ${error.message}`);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function displayResults(data) {
+            document.getElementById('ip-title').textContent = `IP: ${data.ip}`;
+            
+            // Set flag image
+            const flagImg = document.getElementById('ip-flag');
+            if (data.flag_image) {
+                flagImg.src = data.flag_image;
+                flagImg.style.display = 'block';
+            } else {
+                flagImg.style.display = 'none';
+            }
+            
+            // Location info
+            document.getElementById('continent').textContent = data.continent || 'N/A';
+            document.getElementById('country').textContent = 
+                `${data.flag_emoji || ''} ${data.country || 'N/A'} (${data.country_code || 'N/A'})`;
+            document.getElementById('region').textContent = data.region || 'N/A';
+            document.getElementById('city').textContent = data.city || 'N/A';
+            document.getElementById('postal').textContent = data.postal || 'N/A';
+            document.getElementById('coordinates').textContent = 
+                `${data.latitude || 'N/A'}, ${data.longitude || 'N/A'}`;
+            
+            // Network info
+            document.getElementById('asn').textContent = data.asn ? `AS${data.asn}` : 'N/A';
+            document.getElementById('isp').textContent = data.isp || 'N/A';
+            
+            // Map link
+            if (data.latitude && data.longitude) {
+                const mapLink = document.getElementById('google-maps');
+                mapLink.href = `https://www.google.com/maps?q=${data.latitude},${data.longitude}`;
+                document.getElementById('map-link').style.display = 'block';
+            } else {
+                document.getElementById('map-link').style.display = 'none';
             }
         }
 
