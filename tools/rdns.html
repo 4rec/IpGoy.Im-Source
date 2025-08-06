@@ -81,6 +81,15 @@
             margin-bottom: 10px;
             font-style: italic;
         }
+        .copy-btn {
+            margin-top: 5px;
+            padding: 3px 8px;
+            font-size: 12px;
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            border: 1px solid var(--input-border);
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -114,6 +123,7 @@
             <div id="result-content">
                 <div id="ip-type" class="ip-type"></div>
                 <div id="query-info" class="query-info"></div>
+                <button id="copy-query" class="copy-btn">Copy Query</button>
                 
                 <div class="response-info">
                     <h3>DNS Response</h3>
@@ -123,6 +133,7 @@
                 <div class="response-details">
                     <h3>PTR Record</h3>
                     <div id="ptr-record" class="response-data"></div>
+                    <button id="copy-ptr" class="copy-btn">Copy PTR Record</button>
                 </div>
             </div>
             <div class="footer" style="margin-top: 15px;">
@@ -142,6 +153,8 @@
                 lookupRDNS();
             }
         });
+        document.getElementById('copy-query').addEventListener('click', copyQuery);
+        document.getElementById('copy-ptr').addEventListener('click', copyPTR);
 
         async function lookupRDNS() {
             const query = document.getElementById('query-input').value.trim();
@@ -174,8 +187,10 @@
                     ipType = "IPv6";
                     // Remove any IPv6 shorthand notation
                     const expanded = expandIPv6(query);
-                    // Reverse the expanded IPv6 and add .ip6.arpa
-                    const reversed = expanded.split('').reverse().replace(/:/g, '');
+                    // Remove all colons and reverse each character
+                    const noColons = expanded.replace(/:/g, '');
+                    // Split into individual characters and reverse
+                    const reversed = noColons.split('').reverse().join('.');
                     ptrQuery = `${reversed}.ip6.arpa`;
                 } else if (isValidHostname(query)) {
                     ipType = "Hostname";
@@ -186,6 +201,7 @@
 
                 document.getElementById('ip-type').textContent = `Query Type: ${ipType}`;
                 document.getElementById('query-info').textContent = `Query: ${ptrQuery}`;
+                document.getElementById('copy-query').dataset.query = ptrQuery;
 
                 url = `https://dns.google/resolve?name=${ptrQuery}&type=PTR`;
                 const response = await fetch(url);
@@ -204,10 +220,13 @@
                 const ptrRecord = document.getElementById('ptr-record');
                 if (data.Status === 0 && data.Answer && data.Answer.length > 0) {
                     ptrRecord.textContent = data.Answer[0].data;
+                    document.getElementById('copy-ptr').dataset.ptr = data.Answer[0].data;
                 } else if (data.Status === 3) {
                     ptrRecord.textContent = "NXDOMAIN - No PTR record exists";
+                    document.getElementById('copy-ptr').dataset.ptr = "";
                 } else {
                     ptrRecord.textContent = "No PTR record found";
+                    document.getElementById('copy-ptr').dataset.ptr = "";
                 }
 
                 resultBox.style.display = 'block';
@@ -215,6 +234,26 @@
                 showError(`Failed to perform rDNS lookup: ${error.message}`);
             } finally {
                 loading.style.display = 'none';
+            }
+        }
+
+        function copyQuery() {
+            const query = this.dataset.query;
+            if (query) {
+                navigator.clipboard.writeText(query)
+                    .then(() => alert("Query copied to clipboard!"))
+                    .catch(err => alert("Failed to copy query"));
+            }
+        }
+
+        function copyPTR() {
+            const ptr = this.dataset.ptr;
+            if (ptr) {
+                navigator.clipboard.writeText(ptr)
+                    .then(() => alert("PTR record copied to clipboard!"))
+                    .catch(err => alert("Failed to copy PTR record"));
+            } else {
+                alert("No PTR record to copy");
             }
         }
 
