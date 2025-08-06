@@ -175,7 +175,7 @@
                     // Remove any IPv6 shorthand notation
                     const expanded = expandIPv6(query);
                     // Reverse the expanded IPv6 and add .ip6.arpa
-                    const reversed = expanded.split('').reverse().join('.').replace(/:/g, '');
+                    const reversed = expanded.split('').reverse().replace(/:/g, '');
                     ptrQuery = `${reversed}.ip6.arpa`;
                 } else if (isValidHostname(query)) {
                     ipType = "Hostname";
