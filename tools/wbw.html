@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Domain Whois Lookup | ipgoy.im</title>
+    <link rel="stylesheet" href="https://ipgoy.im/styles.css">
+    <style>
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .result-box {
+            margin-top: 20px;
+            display: none;
+        }
+        .error-box {
+            margin-top: 20px;
+            display: none;
+            background-color: var(--active-link);
+            color: white;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .site-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .site-logo {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--header-bg);
+            margin-bottom: 10px;
+        }
+        .loading {
+            display: none;
+            margin: 10px 0;
+            font-style: italic;
+        }
+        .section {
+            margin-bottom: 20px;
+            border: 1px solid var(--table-border);
+            padding: 15px;
+            background-color: var(--table-row-odd);
+        }
+        .section-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: var(--header-bg);
+            border-bottom: 1px solid var(--text-color);
+            padding-bottom: 5px;
+        }
+        .flag-emoji {
+            font-size: 24px;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+        .property {
+            margin-bottom: 8px;
+        }
+        .property-name {
+            font-weight: bold;
+            display: inline-block;
+            width: 200px;
+        }
+        .property-value {
+            display: inline-block;
+        }
+        .status-item {
+            display: inline-block;
+            margin-right: 10px;
+            padding: 3px 5px;
+            background-color: var(--table-row-even);
+            border: 1px solid var(--table-border);
+            margin-bottom: 5px;
+        }
+        .nameserver {
+            font-family: monospace;
+            margin-right: 10px;
+        }
+        .date-value {
+            font-family: monospace;
+        }
+        .raw-json {
+            font-family: monospace;
+            white-space: pre-wrap;
+            background-color: var(--table-row-even);
+            padding: 10px;
+            border: 1px solid var(--table-border);
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .copy-btn {
+            margin-top: 5px;
+            padding: 3px 8px;
+            font-size: 12px;
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            border: 1px solid var(--input-border);
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="https://ipgoy.im">Home</a>
+        <a href="https://ipgoy.im/whois">Domain Whois</a>
+    </div>
+
+    <div class="container">
+        <div class="site-header">
+            <div class="site-logo">ipgoy.im</div>
+            <h1>Domain Whois Lookup</h1>
+        </div>
+        
+        <div class="box">
+            <div class="box-title">Lookup Domain Information</div>
+            <div class="form-group">
+                <label for="domain-name">Domain Name:</label>
+                <input type="text" id="domain-name" placeholder="Enter domain (e.g., google.com)">
+            </div>
+            <button id="lookup-btn">Lookup Domain</button>
+            <div id="loading" class="loading">Fetching whois data...</div>
+        </div>
+
+        <div id="error-box" class="box error-box">
+            <div class="box-title">Error</div>
+            <div id="error-message"></div>
+        </div>
+
+        <div id="result-box" class="box result-box">
+            <div class="box-title">Whois Results</div>
+            <div id="result-content">
+                <!-- Domain Info Section -->
+                <div class="section" id="domain-section">
+                    <div class="section-title">Domain Information</div>
+                    <div id="domain-content"></div>
+                </div>
+
+                <!-- Dates Section -->
+                <div class="section" id="dates-section">
+                    <div class="section-title">Important Dates</div>
+                    <div id="dates-content"></div>
+                </div>
+
+                <!-- Nameservers Section -->
+                <div class="section" id="nameservers-section">
+                    <div class="section-title">Nameservers</div>
+                    <div id="nameservers-content"></div>
+                </div>
+
+                <!-- Status Section -->
+                <div class="section" id="status-section">
+                    <div class="section-title">Domain Status</div>
+                    <div id="status-content"></div>
+                </div>
+
+                <!-- Registrar Section -->
+                <div class="section" id="registrar-section">
+                    <div class="section-title">Registrar Information</div>
+                    <div id="registrar-content"></div>
+                </div>
+
+                <!-- Raw JSON Section -->
+                <div class="section">
+                    <div class="section-title">Raw API Response</div>
+                    <div id="raw-json" class="raw-json"></div>
+                    <button id="copy-json" class="copy-btn">Copy JSON</button>
+                </div>
+            </div>
+            <div class="footer" style="margin-top: 15px;">
+                Data from whois.iii.vg API | Made by rec :3
+            </div>
+        </div>
+
+        <div class="footer">
+            <a href="https://ipgoy.im">ipgoy.im</a> | Made by rec :3
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('lookup-btn').addEventListener('click', lookupDomain);
+        document.getElementById('copy-json').addEventListener('click', copyJSON);
+        document.getElementById('domain-name').addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                lookupDomain();
+            }
+        });
+
+        async function lookupDomain() {
+            const domainName = document.getElementById('domain-name').value.trim();
+            const errorBox = document.getElementById('error-box');
+            const resultBox = document.getElementById('result-box');
+            const loading = document.getElementById('loading');
+            
+            // Hide boxes and show loading
+            errorBox.style.display = 'none';
+            resultBox.style.display = 'none';
+            loading.style.display = 'block';
+
+            if (!domainName) {
+                showError("Please provide a domain name");
+                loading.style.display = 'none';
+                return;
+            }
+
+            try {
+                const url = `https://corsproxy.io/?url=https://whois.iii.vg/api/whois/${domainName}`;
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`API returned status ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Display raw JSON
+                document.getElementById('raw-json').textContent = JSON.stringify(data, null, 2);
+                
+                // Display domain information
+                displayDomainInfo(data.domain_whois);
+                
+                // Display dates information
+                displayDatesInfo(data.domain_whois);
+                
+                // Display nameservers
+                displayNameservers(data.domain_whois);
+                
+                // Display status
+                displayStatus(data.domain_whois);
+                
+                // Display registrar info
+                displayRegistrarInfo(data.domain_whois);
+                
+                resultBox.style.display = 'block';
+            } catch (error) {
+                showError(`Failed to fetch whois data: ${error.message}`);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function displayDomainInfo(domainData) {
+            const domainContent = document.getElementById('domain-content');
+            let html = '';
+            
+            // Domain Name
+            html += `<div class="property">
+                <span class="property-name">Domain:</span>
+                <span class="property-value">${domainData.domain_name}</span>
+            </div>`;
+            
+            // Organization
+            if (domainData.org) {
+                html += `<div class="property">
+                    <span class="property-name">Organization:</span>
+                    <span class="property-value">${domainData.org}</span>
+                </div>`;
+            }
+            
+            // Country with flag
+            if (domainData.country) {
+                const flag = getFlagEmoji(domainData.country);
+                html += `<div class="property">
+                    <span class="property-name">Country:</span>
+                    <span class="property-value">${flag} ${domainData.country}</span>
+                </div>`;
+            }
+            
+            // DNSSEC
+            if (domainData.dnssec) {
+                html += `<div class="property">
+                    <span class="property-name">DNSSEC:</span>
+                    <span class="property-value">${domainData.dnssec}</span>
+                </div>`;
+            }
+            
+            // WHOIS Server
+            if (domainData.whois_server) {
+                html += `<div class="property">
+                    <span class="property-name">WHOIS Server:</span>
+                    <span class="property-value">${domainData.whois_server}</span>
+                </div>`;
+            }
+            
+            domainContent.innerHTML = html;
+        }
+
+        function displayDatesInfo(domainData) {
+            const datesContent = document.getElementById('dates-content');
+            let html = '';
+            
+            // Creation Date
+            if (domainData.creation_date && domainData.creation_date.length > 0) {
+                html += `<div class="property">
+                    <span class="property-name">Creation Date:</span>
+                    <span class="property-value"><span class="date-value">${domainData.creation_date[0]}</span></span>
+                </div>`;
+            }
+            
+            // Updated Date
+            if (domainData.updated_date && domainData.updated_date.length > 0) {
+                html += `<div class="property">
+                    <span class="property-name">Last Updated:</span>
+                    <span class="property-value"><span class="date-value">${domainData.updated_date[0]}</span></span>
+                </div>`;
+            }
+            
+            // Expiration Date
+            if (domainData.expiration_date && domainData.expiration_date.length > 0) {
+                html += `<div class="property">
+                    <span class="property-name">Expiration Date:</span>
+                    <span class="property-value"><span class="date-value">${domainData.expiration_date[0]}</span></span>
+                </div>`;
+            }
+            
+            // Lookup Timestamp
+            if (domainData.lookup_timestamp) {
+                html += `<div class="property">
+                    <span class="property-name">Lookup Timestamp:</span>
+                    <span class="property-value"><span class="date-value">${domainData.lookup_timestamp}</span></span>
+                </div>`;
+            }
+            
+            datesContent.innerHTML = html;
+        }
+
+        function displayNameservers(domainData) {
+            const nameserversContent = document.getElementById('nameservers-content');
+            let html = '';
+            
+            if (domainData.name_servers && domainData.name_servers.length > 0) {
+                domainData.name_servers.forEach(ns => {
+                    html += `<span class="nameserver">${ns}</span>`;
+                });
+            } else {
+                html = '<div>No nameservers listed</div>';
+            }
+            
+            nameserversContent.innerHTML = html;
+        }
+
+        function displayStatus(domainData) {
+            const statusContent = document.getElementById('status-content');
+            let html = '';
+            
+            if (domainData.status && domainData.status.length > 0) {
+                domainData.status.forEach(status => {
+                    // Extract URL if present
+                    const urlMatch = status.match(/https?:\/\/[^\s)]+/);
+                    if (urlMatch) {
+                        const url = urlMatch[0];
+                        const statusText = status.replace(url, '').replace(/[()]/g, '').trim();
+                        html += `<span class="status-item"><a href="${url}" target="_blank">${statusText}</a></span>`;
+                    } else {
+                        html += `<span class="status-item">${status}</span>`;
+                    }
+                });
+            } else {
+                html = '<div>No status information available</div>';
+            }
+            
+            statusContent.innerHTML = html;
+        }
+
+        function displayRegistrarInfo(domainData) {
+            const registrarContent = document.getElementById('registrar-content');
+            let html = '';
+            
+            // Registrar
+            if (domainData.registrar) {
+                html += `<div class="property">
+                    <span class="property-name">Registrar:</span>
+                    <span class="property-value">${domainData.registrar}</span>
+                </div>`;
+            }
+            
+            // Registrar URL
+            if (domainData.registrar_url) {
+                html += `<div class="property">
+                    <span class="property-name">Registrar URL:</span>
+                    <span class="property-value"><a href="${domainData.registrar_url}" target="_blank">${domainData.registrar_url}</a></span>
+                </div>`;
+            }
+            
+            // Abuse Emails
+            if (domainData.emails && domainData.emails.length > 0) {
+                html += `<div class="property">
+                    <span class="property-name">Contact Emails:</span>
+                    <div class="property-value">`;
+                
+                domainData.emails.forEach(email => {
+                    html += `<div><a href="mailto:${email}">${email}</a></div>`;
+                });
+                
+                html += `</div></div>`;
+            }
+            
+            registrarContent.innerHTML = html;
+        }
+
+        function getFlagEmoji(countryCode) {
+            if (!countryCode || countryCode.length !== 2) return '';
+            // Convert country code to flag emoji
+            return String.fromCodePoint(...[...countryCode.toUpperCase()].map(c => 0x1F1A5 + c.charCodeAt(0)));
+        }
+
+        function copyJSON() {
+            const json = document.getElementById('raw-json').textContent;
+            navigator.clipboard.writeText(json)
+                .then(() => alert("JSON copied to clipboard!"))
+                .catch(err => alert("Failed to copy JSON"));
+        }
+
+        function showError(message) {
+            const errorBox = document.getElementById('error-box');
+            document.getElementById('error-message').textContent = message;
+            errorBox.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
