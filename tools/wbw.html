@@ -122,7 +122,6 @@
 <body>
     <div class="navbar">
         <a href="https://ipgoy.im">Home</a>
-        <a href="https://ipgoy.im/whois">Domain Whois</a>
     </div>
 
     <div class="container">
@@ -232,6 +231,10 @@
 
                 const data = await response.json();
                 
+                if (!data.domain_whois) {
+                    throw new Error("No whois data found for this domain");
+                }
+                
                 // Display raw JSON
                 document.getElementById('raw-json').textContent = JSON.stringify(data, null, 2);
                 
@@ -262,11 +265,18 @@
             const domainContent = document.getElementById('domain-content');
             let html = '';
             
+            if (!domainData) {
+                domainContent.innerHTML = '<div>No domain information available</div>';
+                return;
+            }
+            
             // Domain Name
-            html += `<div class="property">
-                <span class="property-name">Domain:</span>
-                <span class="property-value">${domainData.domain_name}</span>
-            </div>`;
+            if (domainData.domain_name) {
+                html += `<div class="property">
+                    <span class="property-name">Domain:</span>
+                    <span class="property-value">${domainData.domain_name}</span>
+                </div>`;
+            }
             
             // Organization
             if (domainData.org) {
@@ -301,12 +311,17 @@
                 </div>`;
             }
             
-            domainContent.innerHTML = html;
+            domainContent.innerHTML = html || '<div>No domain information available</div>';
         }
 
         function displayDatesInfo(domainData) {
             const datesContent = document.getElementById('dates-content');
             let html = '';
+            
+            if (!domainData) {
+                datesContent.innerHTML = '<div>No date information available</div>';
+                return;
+            }
             
             // Creation Date
             if (domainData.creation_date && domainData.creation_date.length > 0) {
@@ -332,37 +347,37 @@
                 </div>`;
             }
             
-            // Lookup Timestamp
-            if (domainData.lookup_timestamp) {
-                html += `<div class="property">
-                    <span class="property-name">Lookup Timestamp:</span>
-                    <span class="property-value"><span class="date-value">${domainData.lookup_timestamp}</span></span>
-                </div>`;
-            }
-            
-            datesContent.innerHTML = html;
+            datesContent.innerHTML = html || '<div>No date information available</div>';
         }
 
         function displayNameservers(domainData) {
             const nameserversContent = document.getElementById('nameservers-content');
             let html = '';
             
-            if (domainData.name_servers && domainData.name_servers.length > 0) {
+            if (!domainData) {
+                nameserversContent.innerHTML = '<div>No nameservers information available</div>';
+                return;
+            }
+            
+            if (domainData.name_servers && Array.isArray(domainData.name_servers) {
                 domainData.name_servers.forEach(ns => {
                     html += `<span class="nameserver">${ns}</span>`;
                 });
-            } else {
-                html = '<div>No nameservers listed</div>';
             }
             
-            nameserversContent.innerHTML = html;
+            nameserversContent.innerHTML = html || '<div>No nameservers listed</div>';
         }
 
         function displayStatus(domainData) {
             const statusContent = document.getElementById('status-content');
             let html = '';
             
-            if (domainData.status && domainData.status.length > 0) {
+            if (!domainData) {
+                statusContent.innerHTML = '<div>No status information available</div>';
+                return;
+            }
+            
+            if (domainData.status && Array.isArray(domainData.status)) {
                 domainData.status.forEach(status => {
                     // Extract URL if present
                     const urlMatch = status.match(/https?:\/\/[^\s)]+/);
@@ -374,16 +389,19 @@
                         html += `<span class="status-item">${status}</span>`;
                     }
                 });
-            } else {
-                html = '<div>No status information available</div>';
             }
             
-            statusContent.innerHTML = html;
+            statusContent.innerHTML = html || '<div>No status information available</div>';
         }
 
         function displayRegistrarInfo(domainData) {
             const registrarContent = document.getElementById('registrar-content');
             let html = '';
+            
+            if (!domainData) {
+                registrarContent.innerHTML = '<div>No registrar information available</div>';
+                return;
+            }
             
             // Registrar
             if (domainData.registrar) {
@@ -402,7 +420,7 @@
             }
             
             // Abuse Emails
-            if (domainData.emails && domainData.emails.length > 0) {
+            if (domainData.emails && Array.isArray(domainData.emails)) {
                 html += `<div class="property">
                     <span class="property-name">Contact Emails:</span>
                     <div class="property-value">`;
@@ -414,7 +432,7 @@
                 html += `</div></div>`;
             }
             
-            registrarContent.innerHTML = html;
+            registrarContent.innerHTML = html || '<div>No registrar information available</div>';
         }
 
         function getFlagEmoji(countryCode) {
