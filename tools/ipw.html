@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP Whois Lookup | ipgoy.im</title>
+    <link rel="stylesheet" href="https://ipgoy.im/styles.css">
+    <style>
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .result-box {
+            margin-top: 20px;
+            display: none;
+        }
+        .error-box {
+            margin-top: 20px;
+            display: none;
+            background-color: var(--active-link);
+            color: white;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .site-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .site-logo {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--header-bg);
+            margin-bottom: 10px;
+        }
+        .loading {
+            display: none;
+            margin: 10px 0;
+            font-style: italic;
+        }
+        .section {
+            margin-bottom: 20px;
+            border: 1px solid var(--table-border);
+            padding: 15px;
+            background-color: var(--table-row-odd);
+        }
+        .section-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: var(--header-bg);
+            border-bottom: 1px solid var(--text-color);
+            padding-bottom: 5px;
+        }
+        .flag-emoji {
+            font-size: 24px;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+        .property {
+            margin-bottom: 8px;
+        }
+        .property-name {
+            font-weight: bold;
+            display: inline-block;
+            width: 200px;
+        }
+        .property-value {
+            display: inline-block;
+        }
+        .subdivision {
+            display: inline-block;
+            margin-right: 10px;
+            padding: 3px 5px;
+            background-color: var(--table-row-even);
+            border: 1px solid var(--table-border);
+        }
+        .notice {
+            padding: 5px;
+            margin: 5px 0;
+            background-color: var(--table-row-even);
+            border-left: 3px solid var(--header-bg);
+        }
+        .notice-title {
+            font-weight: bold;
+        }
+        .link-item {
+            margin-bottom: 3px;
+            word-break: break-all;
+        }
+        .contact-card {
+            border: 1px solid var(--table-border);
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: var(--table-row-even);
+        }
+        .contact-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .raw-json {
+            font-family: monospace;
+            white-space: pre-wrap;
+            background-color: var(--table-row-even);
+            padding: 10px;
+            border: 1px solid var(--table-border);
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .copy-btn {
+            margin-top: 5px;
+            padding: 3px 8px;
+            font-size: 12px;
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            border: 1px solid var(--input-border);
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="https://ipgoy.im">Home</a>
+    </div>
+
+    <div class="container">
+        <div class="site-header">
+            <div class="site-logo">ipgoy.im</div>
+            <h1>IP Whois Lookup</h1>
+        </div>
+        
+        <div class="box">
+            <div class="box-title">Lookup IP Information</div>
+            <div class="form-group">
+                <label for="ip-address">IP Address (IPv4 or IPv6):</label>
+                <input type="text" id="ip-address" placeholder="Enter IP address...">
+            </div>
+            <button id="lookup-btn">Lookup IP</button>
+            <div id="loading" class="loading">Fetching whois data...</div>
+        </div>
+
+        <div id="error-box" class="box error-box">
+            <div class="box-title">Error</div>
+            <div id="error-message"></div>
+        </div>
+
+        <div id="result-box" class="box result-box">
+            <div class="box-title">Whois Results</div>
+            <div id="result-content">
+                <!-- Geolocation Section -->
+                <div class="section" id="geolocation-section">
+                    <div class="section-title">Geolocation Information</div>
+                    <div id="geolocation-content"></div>
+                </div>
+
+                <!-- Network Section -->
+                <div class="section" id="network-section">
+                    <div class="section-title">Network Information</div>
+                    <div id="network-content"></div>
+                </div>
+
+                <!-- Whois Objects Section -->
+                <div class="section" id="objects-section">
+                    <div class="section-title">Whois Objects</div>
+                    <div id="objects-content"></div>
+                </div>
+
+                <!-- Raw JSON Section -->
+                <div class="section">
+                    <div class="section-title">Raw API Response</div>
+                    <div id="raw-json" class="raw-json"></div>
+                    <button id="copy-json" class="copy-btn">Copy JSON</button>
+                </div>
+            </div>
+            <div class="footer" style="margin-top: 15px;">
+                Data from whois.iii.vg API | Made by rec :3
+            </div>
+        </div>
+
+        <div class="footer">
+            <a href="https://ipgoy.im">ipgoy.im</a> | Made by rec :3
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('lookup-btn').addEventListener('click', lookupIP);
+        document.getElementById('copy-json').addEventListener('click', copyJSON);
+        document.getElementById('ip-address').addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                lookupIP();
+            }
+        });
+
+        async function lookupIP() {
+            const ipAddress = document.getElementById('ip-address').value.trim();
+            const errorBox = document.getElementById('error-box');
+            const resultBox = document.getElementById('result-box');
+            const loading = document.getElementById('loading');
+            
+            // Hide boxes and show loading
+            errorBox.style.display = 'none';
+            resultBox.style.display = 'none';
+            loading.style.display = 'block';
+
+            if (!ipAddress) {
+                showError("Please provide an IP address");
+                loading.style.display = 'none';
+                return;
+            }
+
+            try {
+                const url = `https://whois.iii.vg/api/geo-lookup/${ipAddress}`;
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`API returned status ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Display raw JSON
+                document.getElementById('raw-json').textContent = JSON.stringify(data, null, 2);
+                
+                // Display geolocation information
+                displayGeolocation(data);
+                
+                // Display network information
+                displayNetworkInfo(data.whois_data.ip_whois);
+                
+                // Display whois objects
+                displayWhoisObjects(data.whois_data.ip_whois.objects);
+                
+                resultBox.style.display = 'block';
+            } catch (error) {
+                showError(`Failed to fetch whois data: ${error.message}`);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function displayGeolocation(data) {
+            const geoContent = document.getElementById('geolocation-content');
+            let html = '';
+            
+            // City
+            if (data.city) {
+                html += `<div class="property">
+                    <span class="property-name">City:</span>
+                    <span class="property-value">${data.city.name} (Geoname ID: ${data.city.geoname_id})</span>
+                </div>`;
+            }
+            
+            // Country with flag
+            if (data.country) {
+                const flag = getFlagEmoji(data.country.iso_code);
+                html += `<div class="property">
+                    <span class="property-name">Country:</span>
+                    <span class="property-value">${flag} ${data.country.name} (${data.country.iso_code}) ${data.country.is_in_european_union ? '🇪🇺 EU Member' : ''}</span>
+                </div>`;
+            }
+            
+            // Continent
+            if (data.continent) {
+                html += `<div class="property">
+                    <span class="property-name">Continent:</span>
+                    <span class="property-value">${data.continent.name} (${data.continent.code})</span>
+                </div>`;
+            }
+            
+            // Location
+            if (data.location) {
+                html += `<div class="property">
+                    <span class="property-name">Coordinates:</span>
+                    <span class="property-value">${data.location.latitude}, ${data.location.longitude} (Accuracy: ${data.location.accuracy_radius} km)</span>
+                </div>`;
+                
+                html += `<div class="property">
+                    <span class="property-name">Time Zone:</span>
+                    <span class="property-value">${data.location.time_zone}</span>
+                </div>`;
+            }
+            
+            // Postal
+            if (data.postal) {
+                html += `<div class="property">
+                    <span class="property-name">Postal Code:</span>
+                    <span class="property-value">${data.postal.code}</span>
+                </div>`;
+            }
+            
+            // Subdivisions
+            if (data.subdivisions && data.subdivisions.length > 0) {
+                html += `<div class="property">
+                    <span class="property-name">Subdivisions:</span>
+                    <div class="property-value">`;
+                
+                data.subdivisions.forEach(sub => {
+                    html += `<span class="subdivision">${sub.name} (${sub.iso_code})</span>`;
+                });
+                
+                html += `</div></div>`;
+            }
+            
+            // Registered Country
+            if (data.registered_country) {
+                const flag = getFlagEmoji(data.registered_country.iso_code);
+                html += `<div class="property">
+                    <span class="property-name">Registered Country:</span>
+                    <span class="property-value">${flag} ${data.registered_country.name} (${data.registered_country.iso_code}) ${data.registered_country.is_in_european_union ? '🇪🇺 EU Member' : ''}</span>
+                </div>`;
+            }
+            
+            // Database Info
+            if (data.database_info) {
+                html += `<div class="property">
+                    <span class="property-name">Database Version:</span>
+                    <span class="property-value">${data.database_info.version_tag}</span>
+                </div>`;
+                
+                html += `<div class="property">
+                    <span class="property-name">Last Updated:</span>
+                    <span class="property-value">${data.database_info.last_updated_utc}</span>
+                </div>`;
+            }
+            
+            geoContent.innerHTML = html;
+        }
+
+        function displayNetworkInfo(networkData) {
+            const networkContent = document.getElementById('network-content');
+            let html = '';
+            
+            if (!networkData) {
+                networkContent.innerHTML = '<div>No network information available</div>';
+                return;
+            }
+            
+            // ASN Info
+            html += `<div class="property">
+                <span class="property-name">ASN:</span>
+                <span class="property-value">${networkData.asn} (${networkData.asn_description})</span>
+            </div>`;
+            
+            // Network Range
+            html += `<div class="property">
+                <span class="property-name">Network Range:</span>
+                <span class="property-value">${networkData.network.handle} (CIDR: ${networkData.network.cidr})</span>
+            </div>`;
+            
+            // Network Type
+            html += `<div class="property">
+                <span class="property-name">Network Type:</span>
+                <span class="property-value">${networkData.network.type} (${networkData.network.ip_version})</span>
+            </div>`;
+            
+            // Network Name
+            if (networkData.network.name) {
+                html += `<div class="property">
+                    <span class="property-name">Network Name:</span>
+                    <span class="property-value">${networkData.network.name}</span>
+                </div>`;
+            }
+            
+            // Network Country
+            if (networkData.network.country) {
+                const flag = getFlagEmoji(networkData.network.country);
+                html += `<div class="property">
+                    <span class="property-name">Network Country:</span>
+                    <span class="property-value">${flag} ${networkData.network.country}</span>
+                </div>`;
+            }
+            
+            // Network Status
+            if (networkData.network.status && networkData.network.status.length > 0) {
+                html += `<div class="property">
+                    <span class="property-name">Status:</span>
+                    <span class="property-value">${networkData.network.status.join(', ')}</span>
+                </div>`;
+            }
+            
+            // Network Events
+            if (networkData.network.events && networkData.network.events.length > 0) {
+                html += `<div class="property">
+                    <span class="property-name">Events:</span>
+                    <div class="property-value">`;
+                
+                networkData.network.events.forEach(event => {
+                    html += `<div>${event.action}: ${event.timestamp}</div>`;
+                });
+                
+                html += `</div></div>`;
+            }
+            
+            // Network Notices
+            if (networkData.network.notices && networkData.network.notices.length > 0) {
+                html += `<div class="property">
+                    <span class="property-name">Notices:</span>
+                    <div class="property-value">`;
+                
+                networkData.network.notices.forEach(notice => {
+                    html += `<div class="notice">
+                        <div class="notice-title">${notice.title}</div>
+                        <div>${notice.description}</div>`;
+                    
+                    if (notice.links && notice.links.length > 0) {
+                        html += `<div>Links:`;
+                        notice.links.forEach(link => {
+                            html += `<div class="link-item"><a href="${link}" target="_blank">${link}</a></div>`;
+                        });
+                        html += `</div>`;
+                    }
+                    
+                    html += `</div>`;
+                });
+                
+                html += `</div></div>`;
+            }
+            
+            // Network Links
+            if (networkData.network.links && networkData.network.links.length > 0) {
+                html += `<div class="property">
+                    <span class="property-name">Links:</span>
+                    <div class="property-value">`;
+                
+                networkData.network.links.forEach(link => {
+                    html += `<div class="link-item"><a href="${link}" target="_blank">${link}</a></div>`;
+                });
+                
+                html += `</div></div>`;
+            }
+            
+            networkContent.innerHTML = html;
+        }
+
+        function displayWhoisObjects(objects) {
+            const objectsContent = document.getElementById('objects-content');
+            let html = '';
+            
+            if (!objects) {
+                objectsContent.innerHTML = '<div>No whois objects available</div>';
+                return;
+            }
+            
+            for (const [key, obj] of Object.entries(objects)) {
+                html += `<div class="contact-card">
+                    <div class="contact-title">${key}</div>`;
+                
+                // Handle
+                if (obj.handle) {
+                    html += `<div class="property">
+                        <span class="property-name">Handle:</span>
+                        <span class="property-value">${obj.handle}</span>
+                    </div>`;
+                }
+                
+                // Roles
+                if (obj.roles && obj.roles.length > 0) {
+                    html += `<div class="property">
+                        <span class="property-name">Roles:</span>
+                        <span class="property-value">${obj.roles.join(', ')}</span>
+                    </div>`;
+                }
+                
+                // Contact Info
+                if (obj.contact) {
+                    const contact = obj.contact;
+                    html += `<div class="property">
+                        <span class="property-name">Contact Type:</span>
+                        <span class="property-value">${contact.kind}</span>
+                    </div>`;
+                    
+                    if (contact.name) {
+                        html += `<div class="property">
+                            <span class="property-name">Name:</span>
+                            <span class="property-value">${contact.name}</span>
+                        </div>`;
+                    }
+                    
+                    if (contact.address && contact.address.length > 0) {
+                        html += `<div class="property">
+                            <span class="property-name">Address:</span>
+                            <div class="property-value">`;
+                        
+                        contact.address.forEach(addr => {
+                            html += `<div>${addr.value}</div>`;
+                        });
+                        
+                        html += `</div></div>`;
+                    }
+                    
+                    if (contact.phone && contact.phone.length > 0) {
+                        html += `<div class="property">
+                            <span class="property-name">Phone:</span>
+                            <div class="property-value">`;
+                        
+                        contact.phone.forEach(phone => {
+                            html += `<div>${phone.type}: ${phone.value}</div>`;
+                        });
+                        
+                        html += `</div></div>`;
+                    }
+                    
+                    if (contact.email && contact.email.length > 0) {
+                        html += `<div class="property">
+                            <span class="property-name">Email:</span>
+                            <div class="property-value">`;
+                        
+                        contact.email.forEach(email => {
+                            html += `<div>${email.type}: ${email.value}</div>`;
+                        });
+                        
+                        html += `</div></div>`;
+                    }
+                }
+                
+                // Events
+                if (obj.events && obj.events.length > 0) {
+                    html += `<div class="property">
+                        <span class="property-name">Events:</span>
+                        <div class="property-value">`;
+                    
+                    obj.events.forEach(event => {
+                        html += `<div>${event.action}: ${event.timestamp}</div>`;
+                    });
+                    
+                    html += `</div></div>`;
+                }
+                
+                // Notices
+                if (obj.notices && obj.notices.length > 0) {
+                    html += `<div class="property">
+                        <span class="property-name">Notices:</span>
+                        <div class="property-value">`;
+                    
+                    obj.notices.forEach(notice => {
+                        html += `<div class="notice">
+                            <div class="notice-title">${notice.title}</div>
+                            <div>${notice.description}</div>`;
+                        
+                        if (notice.links && notice.links.length > 0) {
+                            html += `<div>Links:`;
+                            notice.links.forEach(link => {
+                                html += `<div class="link-item"><a href="${link}" target="_blank">${link}</a></div>`;
+                            });
+                            html += `</div>`;
+                        }
+                        
+                        html += `</div>`;
+                    });
+                    
+                    html += `</div></div>`;
+                }
+                
+                // Links
+                if (obj.links && obj.links.length > 0) {
+                    html += `<div class="property">
+                        <span class="property-name">Links:</span>
+                        <div class="property-value">`;
+                    
+                    obj.links.forEach(link => {
+                        if (typeof link === 'string') {
+                            html += `<div class="link-item"><a href="${link}" target="_blank">${link}</a></div>`;
+                        }
+                    });
+                    
+                    html += `</div></div>`;
+                }
+                
+                // Entities
+                if (obj.entities && obj.entities.length > 0) {
+                    html += `<div class="property">
+                        <span class="property-name">Related Entities:</span>
+                        <div class="property-value">`;
+                    
+                    obj.entities.forEach(entity => {
+                        html += `<div>${entity}</div>`;
+                    });
+                    
+                    html += `</div></div>`;
+                }
+                
+                html += `</div>`;
+            }
+            
+            objectsContent.innerHTML = html;
+        }
+
+        function getFlagEmoji(countryCode) {
+            if (!countryCode) return '';
+            // Convert country code to flag emoji
+            return String.fromCodePoint(...[...countryCode.toUpperCase()].map(c => 0x1F1A5 + c.charCodeAt(0)));
+        }
+
+        function copyJSON() {
+            const json = document.getElementById('raw-json').textContent;
+            navigator.clipboard.writeText(json)
+                .then(() => alert("JSON copied to clipboard!"))
+                .catch(err => alert("Failed to copy JSON"));
+        }
+
+        function showError(message) {
+            const errorBox = document.getElementById('error-box');
+            document.getElementById('error-message').textContent = message;
+            errorBox.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
