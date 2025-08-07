@@ -225,7 +225,7 @@
             }
 
             try {
-                const url = `https://whois.iii.vg/api/geo-lookup/${ipAddress}`;
+                const url = `https://corsproxy.io/?url=https://whois.iii.vg/api/geo-lookup/${ipAddress}`;
                 const response = await fetch(url);
                 
                 if (!response.ok) {
